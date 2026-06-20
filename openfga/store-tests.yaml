@@ -1,0 +1,106 @@
+name: HR Assistant authorization model
+model_file: model.fga
+
+tuples:
+  - user: user:sarah
+    relation: member
+    object: department:engineering
+  - user: user:david
+    relation: member
+    object: department:engineering
+  - user: user:morgan
+    relation: manager
+    object: department:engineering
+  - user: user:hr_admin1
+    relation: hr_admin
+    object: leave_record:sarah_leave
+  - user: user:hr_admin1
+    relation: hr_admin
+    object: leave_record:david_leave
+  - user: user:hr_admin1
+    relation: hr_admin
+    object: salary_record:sarah_salary
+  - user: user:sarah
+    relation: owner
+    object: leave_record:sarah_leave
+  - user: leave_record:sarah_leave
+    relation: department
+    object: department:engineering
+  - user: user:david
+    relation: owner
+    object: leave_record:david_leave
+  - user: leave_record:david_leave
+    relation: department
+    object: department:engineering
+  - user: user:sarah
+    relation: owner
+    object: salary_record:sarah_salary
+  - user: user:*
+    relation: viewer
+    object: policy_document:leave_policy
+
+tests:
+  - name: Sarah can see her own leave record
+    check:
+      - user: user:sarah
+        object: leave_record:sarah_leave
+        assertions:
+          viewer: true
+
+  - name: Sarah cannot see David's leave record
+    check:
+      - user: user:sarah
+        object: leave_record:david_leave
+        assertions:
+          viewer: false
+
+  - name: Engineering manager can see reports' leave records
+    check:
+      - user: user:morgan
+        object: leave_record:sarah_leave
+        assertions:
+          viewer: true
+      - user: user:morgan
+        object: leave_record:david_leave
+        assertions:
+          viewer: true
+
+  - name: HR admin can see everyone's leave records
+    check:
+      - user: user:hr_admin1
+        object: leave_record:sarah_leave
+        assertions:
+          viewer: true
+      - user: user:hr_admin1
+        object: leave_record:david_leave
+        assertions:
+          viewer: true
+
+  - name: Manager cannot see reports' salary records
+    check:
+      - user: user:morgan
+        object: salary_record:sarah_salary
+        assertions:
+          viewer: false
+
+  - name: Only owner and HR admin see salary records
+    check:
+      - user: user:sarah
+        object: salary_record:sarah_salary
+        assertions:
+          viewer: true
+      - user: user:hr_admin1
+        object: salary_record:sarah_salary
+        assertions:
+          viewer: true
+      - user: user:david
+        object: salary_record:sarah_salary
+        assertions:
+          viewer: false
+
+  - name: Policy documents are visible to everyone
+    check:
+      - user: user:david
+        object: policy_document:leave_policy
+        assertions:
+          viewer: true

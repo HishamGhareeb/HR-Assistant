@@ -1,0 +1,48 @@
+model
+  schema 1.1
+
+type user
+
+type department
+  relations
+    define member: [user]
+    define manager: [user]
+
+# Generic record types HR documents/data get tagged as when ingested.
+# hr_admin and owner are assigned tuples; department membership grants
+# manager-level visibility EXCEPT on salary_record, by design.
+
+type employee_record
+  relations
+    define owner: [user]
+    define department: [department]
+    define hr_admin: [user]
+    define viewer: owner or hr_admin or manager from department
+
+type leave_record
+  relations
+    define owner: [user]
+    define department: [department]
+    define hr_admin: [user]
+    define viewer: owner or hr_admin or manager from department
+
+type performance_record
+  relations
+    define owner: [user]
+    define department: [department]
+    define hr_admin: [user]
+    define viewer: owner or hr_admin or manager from department
+
+# No "manager from department" here: managers see performance data for
+# their reports, but never salary/compensation data. Only the owner and
+# HR admins can view a salary_record.
+type salary_record
+  relations
+    define owner: [user]
+    define hr_admin: [user]
+    define viewer: owner or hr_admin
+
+# Policy documents are visible to every authenticated employee.
+type policy_document
+  relations
+    define viewer: [user, user:*]

@@ -1,0 +1,10 @@
+services:
+  openfga:
+    image: openfga/openfga:latest
+    command: run
+    ports:
+      - "8080:8080" # HTTP API
+      - "8081:8081" # gRPC API
+      - "3000:3000" # Playground UI
+    environment:
+      - OPENFGA_PLAYGROUND_ENABLED=true
