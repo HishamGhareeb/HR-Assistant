@@ -4,7 +4,6 @@ content is treated strictly as data, never as instructions, so prompt
 injection embedded in an indexed document can't redirect the model."""
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 
 from anthropic import Anthropic
@@ -38,18 +37,19 @@ class Suggestion:
     record_reference: str | None
 
 
-@dataclass
-class AssistantResponse:
-    answer: str
-    suggestions: list[Suggestion]
-
-
 class ClaudeClient:
     def __init__(self, api_key: str, model: str) -> None:
         self._client = Anthropic(api_key=api_key)
         self._model = model
 
-    def answer(self, question: str, context_chunks: list[str]) -> AssistantResponse:
+    def complete(self, question: str, context_chunks: list[str]) -> str:
+        """Call Claude and return the **raw** response text, unparsed and
+        unvalidated. `glue.model_response.validate_model_response` is the
+        one place JSON/schema validation happens (bounded lengths, strict
+        shape) -- keeping parsing out of this method means there's a
+        single, testable gate a malformed or adversarial response has to
+        pass through, not one ad hoc `json.loads` per caller.
+        """
         context = "\n\n---\n\n".join(context_chunks) if context_chunks else "(no authorized context found)"
         message = self._client.messages.create(
             model=self._model,
@@ -62,7 +62,4 @@ class ClaudeClient:
                 }
             ],
         )
-        text = "".join(block.text for block in message.content if block.type == "text")
-        parsed = json.loads(text)
-        suggestions = [Suggestion(**s) for s in parsed.get("suggestions", [])]
-        return AssistantResponse(answer=parsed["answer"], suggestions=suggestions)
+        return "".join(block.text for block in message.content if block.type == "text")

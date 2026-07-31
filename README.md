@@ -45,9 +45,12 @@ uv sync --extra dev
 uv run uvicorn glue.app:app --reload
 ```
 
-The first API slice exposes `GET /health` and `POST /v1/questions`. The question
-endpoint currently accepts `X-User-ID` only as a trusted internal identity handoff;
-a public deployment must put signed authentication in front of it. `/health`
-starts and responds without service credentials so an orchestrator can distinguish
-a live process from a configured one. `/v1/questions` returns `503` until all
-required values in `.env.example` are configured.
+The API exposes `GET /health`, `GET /metrics` (Prometheus exposition format),
+and `POST /v1/questions`. The question endpoint requires a signed
+`Authorization: Bearer <JWT>` (see `docs/AUTHENTICATION.md`) carrying
+`tenant_id`/`sub` claims -- the old `X-User-ID` handoff header is no longer
+accepted. `/health` starts and responds without service credentials so an
+orchestrator can distinguish a live process from a configured one.
+`/v1/questions` returns `503` until all required values in `.env.example`
+are configured. See `docs/API_INTEGRATION.md` for how the pieces built
+across HIS-12–HIS-18 are wired into this request path.
