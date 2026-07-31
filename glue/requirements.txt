@@ -1,4 +1,5 @@
 anthropic
+httpx
 langchain
 openfga-sdk
 llm-guard
