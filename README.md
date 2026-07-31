@@ -17,7 +17,9 @@ Requires Docker Desktop (WSL2 backend) running.
 **C: is nearly full, so everything heavy is routed to D::**
 - Right after installing Docker Desktop (before pulling any images), run `./scripts/move_docker_data_to_d.ps1` to relocate Docker's image/volume storage to `D:\docker-data`.
 - `./scripts/stage0_setup.ps1` clones `frappe/hrms` and the Onyx installer into `D:\hr-assistant-external` (override with `-ExternalDir`) and starts OpenFGA via `docker/openfga/docker-compose.yml`.
-- For Python deps (`glue/requirements*.txt`), create the venv on D: too, e.g. `python -m venv D:\hr-assistant-venv` then `D:\hr-assistant-venv\Scripts\Activate.ps1`, rather than `.venv` inside this repo on C:.
+- For Python dependencies, `pyproject.toml` and `uv.lock` are the single
+  reproducible source of truth. If space is tight, set `UV_PROJECT_ENVIRONMENT`
+  to a directory on D: before running `uv sync`.
 
 Frappe HR and Onyx each manage their own compose lifecycle in their own directories — follow the printed next steps to bring each one up.
 
@@ -29,3 +31,26 @@ Frappe HR and Onyx each manage their own compose lifecycle in their own director
 - `openfga/` — authorization model and test tuples (Stage 2)
 - `scripts/` — setup and data-seeding scripts
 - `tests/promptfoo/` — automated adversarial test suite (Stage 8)
+
+## API development
+
+The architecture and release gates are documented in `docs/ARCHITECTURE.md` and
+`docs/PRODUCT_ROADMAP.md`.
+
+Install the project with development dependencies, copy `.env.example` to `.env`,
+and run:
+
+```powershell
+uv sync --extra dev
+uv run uvicorn glue.app:app --reload
+```
+
+The API exposes `GET /health`, `GET /metrics` (Prometheus exposition format),
+and `POST /v1/questions`. The question endpoint requires a signed
+`Authorization: Bearer <JWT>` (see `docs/AUTHENTICATION.md`) carrying
+`tenant_id`/`sub` claims -- the old `X-User-ID` handoff header is no longer
+accepted. `/health` starts and responds without service credentials so an
+orchestrator can distinguish a live process from a configured one.
+`/v1/questions` returns `503` until all required values in `.env.example`
+are configured. See `docs/API_INTEGRATION.md` for how the pieces built
+across HIS-12–HIS-18 are wired into this request path.

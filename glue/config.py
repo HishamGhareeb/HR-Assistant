@@ -21,7 +21,10 @@ class Config:
         self.claude_model = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
         self.onyx_api_url = _required("ONYX_API_URL")
-        self.onyx_api_key = os.environ.get("ONYX_API_KEY", "")
+        # The admin search endpoint requires an API key (see
+        # glue/onyx_client.py) -- unlike the old stub, this is no longer
+        # optional.
+        self.onyx_api_key = _required("ONYX_API_KEY")
 
         self.openfga_api_url = _required("OPENFGA_API_URL")
         self.openfga_store_id = _required("OPENFGA_STORE_ID")
@@ -30,3 +33,19 @@ class Config:
         self.langfuse_public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
         self.langfuse_secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "")
         self.langfuse_host = os.environ.get("LANGFUSE_HOST", "http://localhost:3001")
+
+        # Signed authentication (glue/auth.py) -- exactly one key source
+        # must be configured; validated in glue/app.py's build_token_verifier
+        # rather than here, so a JWKS-URL deployment doesn't need to also
+        # set the static-keys variable (or vice versa).
+        self.auth_issuer = _required("AUTH_ISSUER")
+        self.auth_audience = _required("AUTH_AUDIENCE")
+        self.auth_jwks_url = os.environ.get("AUTH_JWKS_URL", "")
+        # JSON object: {"<kid>": "<PEM public key>", ...}
+        self.auth_static_keys_json = os.environ.get("AUTH_STATIC_KEYS_JSON", "")
+
+        # Audit (glue/audit.py) -- privacy_key pseudonymizes the actor
+        # reference; losing/rotating it starts a new correlation epoch,
+        # see docs/AUDIT_AND_OBSERVABILITY.md.
+        self.audit_privacy_key = _required("AUDIT_PRIVACY_KEY").encode("utf-8")
+        self.audit_log_path = os.environ.get("AUDIT_LOG_PATH", ".tmp/audit.jsonl")
