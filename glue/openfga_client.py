@@ -49,7 +49,7 @@ from __future__ import annotations
 import logging
 
 from openfga_sdk import ClientConfiguration, OpenFgaClient
-from openfga_sdk.client.models import ClientBatchCheckItem, ClientBatchCheckRequest
+from openfga_sdk.client.models import ClientBatchCheckItem, ClientBatchCheckRequest, ClientTuple
 
 from .onyx_client import Document
 
@@ -165,3 +165,42 @@ class OpenFgaFilter:
             for index, (_object_id, document) in enumerate(scoped)
             if str(index) in allowed_correlation_ids
         ]
+
+
+class OpenFgaTupleWriter:
+    """Write-path counterpart to `OpenFgaFilter`, used by the Frappe sync
+    (`glue/frappe_sync.py`) to keep tuples in step with Frappe. Deletes
+    tolerate a tuple that's already gone -- OpenFGA's delete errors on a
+    missing tuple, but a sync retry after a partial failure must be able
+    to re-issue the same delete without that turning into a hard error."""
+
+    def __init__(self, api_url: str, store_id: str, model_id: str = "") -> None:
+        self._config = ClientConfiguration(
+            api_url=api_url,
+            store_id=store_id,
+            authorization_model_id=model_id or None,
+        )
+
+    def _open_client(self) -> OpenFgaClient:
+        return OpenFgaClient(self._config)
+
+    async def write_tuples(self, tuples: list[tuple[str, str, str]]) -> None:
+        if not tuples:
+            return
+        async with self._open_client() as client:
+            await client.write_tuples(
+                [ClientTuple(user=user, relation=relation, object=object_id) for user, relation, object_id in tuples]
+            )
+
+    async def delete_tuples(self, tuples: list[tuple[str, str, str]]) -> None:
+        if not tuples:
+            return
+        async with self._open_client() as client:
+            for user, relation, object_id in tuples:
+                try:
+                    await client.delete_tuples([ClientTuple(user=user, relation=relation, object=object_id)])
+                except Exception as exc:
+                    message = str(exc).lower()
+                    if "not found" in message or "no such" in message or "does not exist" in message:
+                        continue
+                    raise
