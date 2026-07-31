@@ -6,6 +6,9 @@ No autonomous writes anywhere in scope. The assistant answers questions and rais
 
 See `docs/` for the full build manifesto, adversarial test protocol, and DPA draft.
 
+For the reproducible local authorization stack and CI checks, see
+[`docs/LOCAL_DEVELOPMENT.md`](docs/LOCAL_DEVELOPMENT.md).
+
 ## Status
 
 Stage 0 (foundation systems) — scaffolding in progress. Synthetic data only until the full adversarial-testing gate (Stage 9) is passed.
@@ -16,7 +19,7 @@ Requires Docker Desktop (WSL2 backend) running.
 
 **C: is nearly full, so everything heavy is routed to D::**
 - Right after installing Docker Desktop (before pulling any images), run `./scripts/move_docker_data_to_d.ps1` to relocate Docker's image/volume storage to `D:\docker-data`.
-- `./scripts/stage0_setup.ps1` clones `frappe/hrms` and the Onyx installer into `D:\hr-assistant-external` (override with `-ExternalDir`) and starts OpenFGA via `docker/openfga/docker-compose.yml`.
+- `./scripts/stage0_setup.ps1` clones `frappe/hrms` and the Onyx installer into `D:\hr-assistant-external` (override with `-ExternalDir`) and starts OpenFGA via the root `compose.yaml`. All published local ports are loopback-only.
 - For Python dependencies, `pyproject.toml` and `uv.lock` are the single
   reproducible source of truth. If space is tight, set `UV_PROJECT_ENVIRONMENT`
   to a directory on D: before running `uv sync`.

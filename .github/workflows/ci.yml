@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+      - name: Compile Python sources
+        run: uv run python -m compileall -q glue tests
+      - name: Run tests
+        run: uv run pytest -q
+      - name: Build API image
+        run: docker build --tag hr-assistant-api:ci .
+      - name: Verify API image health endpoint
+        run: |
+          docker run --detach --rm --name hr-assistant-api-ci --publish 8000:8000 hr-assistant-api:ci
+          trap 'docker logs hr-assistant-api-ci; docker stop hr-assistant-api-ci' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error http://localhost:8000/health; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+
+  compose-config:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local stack configuration
+        run: docker compose --file compose.yaml config --quiet

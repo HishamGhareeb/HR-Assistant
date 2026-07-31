@@ -1,10 +1,18 @@
 services:
   openfga:
-    image: openfga/openfga:latest
+    image: openfga/openfga:v1.8.12
     command: run
     ports:
-      - "8080:8080" # HTTP API
-      - "8081:8081" # gRPC API
-      - "3000:3000" # Playground UI
+      - "127.0.0.1:8080:8080" # HTTP API
+      - "127.0.0.1:8081:8081" # gRPC API
+      - "127.0.0.1:3000:3000" # Playground UI
     environment:
       - OPENFGA_PLAYGROUND_ENABLED=true
+    healthcheck:
+      # Probe the running gRPC API (and therefore its datastore), not merely
+      # whether the image's binary can print a version string.
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8081"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
