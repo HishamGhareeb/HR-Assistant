@@ -3,5 +3,6 @@ langchain
 openfga-sdk
 llm-guard
 langfuse
+pydantic
 python-dotenv
 requests
