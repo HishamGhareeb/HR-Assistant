@@ -1,3 +1,15 @@
+# Tenant isolation is enforced by namespacing every object ID with its
+# tenant, not by relations in this model: "leave_record:acme__sarah_leave"
+# and "leave_record:globex__sarah_leave" are unrelated objects to OpenFGA
+# even if both tenants have an employee named "sarah". One shared
+# store/model is used across tenants; the "<tenant_id>__<local_id>" object
+# ID convention (built by glue.openfga_client.scoped_object_id) is what
+# actually prevents cross-tenant collisions. Every tuple written by the
+# Frappe -> OpenFGA sync (department membership, ownership, hr_admin, ...)
+# MUST use the same convention for both the record and any department it
+# references, or a record silently becomes unreachable. See
+# docs/OPENFGA_PROVISIONING.md.
+
 model
   schema 1.1
 
