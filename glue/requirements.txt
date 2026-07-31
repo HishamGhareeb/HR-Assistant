@@ -6,4 +6,5 @@ llm-guard
 langfuse
 pydantic
 python-dotenv
+pyyaml
 requests

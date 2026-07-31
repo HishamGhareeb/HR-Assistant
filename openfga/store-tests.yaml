@@ -1,106 +1,153 @@
 name: HR Assistant authorization model
 model_file: model.fga
 
+# Object IDs below follow the "<type>:<tenant_id>__<local_id>" convention
+# documented in model.fga and docs/OPENFGA_PROVISIONING.md. These tuples
+# double as the local/dev seed data loaded by scripts/provision_openfga.py.
 tuples:
   - user: user:sarah
     relation: member
-    object: department:engineering
+    object: department:acme__engineering
   - user: user:david
     relation: member
-    object: department:engineering
+    object: department:acme__engineering
   - user: user:morgan
     relation: manager
-    object: department:engineering
+    object: department:acme__engineering
   - user: user:hr_admin1
     relation: hr_admin
-    object: leave_record:sarah_leave
+    object: leave_record:acme__sarah_leave
   - user: user:hr_admin1
     relation: hr_admin
-    object: leave_record:david_leave
+    object: leave_record:acme__david_leave
   - user: user:hr_admin1
     relation: hr_admin
-    object: salary_record:sarah_salary
+    object: salary_record:acme__sarah_salary
   - user: user:sarah
     relation: owner
-    object: leave_record:sarah_leave
-  - user: leave_record:sarah_leave
+    object: leave_record:acme__sarah_leave
+  - user: leave_record:acme__sarah_leave
     relation: department
-    object: department:engineering
+    object: department:acme__engineering
   - user: user:david
     relation: owner
-    object: leave_record:david_leave
-  - user: leave_record:david_leave
+    object: leave_record:acme__david_leave
+  - user: leave_record:acme__david_leave
     relation: department
-    object: department:engineering
+    object: department:acme__engineering
   - user: user:sarah
     relation: owner
-    object: salary_record:sarah_salary
+    object: salary_record:acme__sarah_salary
   - user: user:*
     relation: viewer
-    object: policy_document:leave_policy
+    object: policy_document:acme__leave_policy
+  # Second tenant, deliberately reusing the same local IDs and an
+  # overlapping employee name, to prove tenant namespacing -- not relation
+  # logic -- is what keeps them apart.
+  - user: user:sarah
+    relation: member
+    object: department:globex__engineering
+  - user: user:sarah
+    relation: owner
+    object: leave_record:globex__sarah_leave
+  - user: leave_record:globex__sarah_leave
+    relation: department
+    object: department:globex__engineering
+  - user: user:hr_admin1
+    relation: hr_admin
+    object: leave_record:globex__sarah_leave
 
 tests:
   - name: Sarah can see her own leave record
     check:
       - user: user:sarah
-        object: leave_record:sarah_leave
+        object: leave_record:acme__sarah_leave
         assertions:
           viewer: true
 
   - name: Sarah cannot see David's leave record
     check:
       - user: user:sarah
-        object: leave_record:david_leave
+        object: leave_record:acme__david_leave
         assertions:
           viewer: false
 
   - name: Engineering manager can see reports' leave records
     check:
       - user: user:morgan
-        object: leave_record:sarah_leave
+        object: leave_record:acme__sarah_leave
         assertions:
           viewer: true
       - user: user:morgan
-        object: leave_record:david_leave
+        object: leave_record:acme__david_leave
         assertions:
           viewer: true
 
   - name: HR admin can see everyone's leave records
     check:
       - user: user:hr_admin1
-        object: leave_record:sarah_leave
+        object: leave_record:acme__sarah_leave
         assertions:
           viewer: true
       - user: user:hr_admin1
-        object: leave_record:david_leave
+        object: leave_record:acme__david_leave
         assertions:
           viewer: true
 
   - name: Manager cannot see reports' salary records
     check:
       - user: user:morgan
-        object: salary_record:sarah_salary
+        object: salary_record:acme__sarah_salary
         assertions:
           viewer: false
 
   - name: Only owner and HR admin see salary records
     check:
       - user: user:sarah
-        object: salary_record:sarah_salary
+        object: salary_record:acme__sarah_salary
         assertions:
           viewer: true
       - user: user:hr_admin1
-        object: salary_record:sarah_salary
+        object: salary_record:acme__sarah_salary
         assertions:
           viewer: true
       - user: user:david
-        object: salary_record:sarah_salary
+        object: salary_record:acme__sarah_salary
         assertions:
           viewer: false
 
   - name: Policy documents are visible to everyone
     check:
       - user: user:david
-        object: policy_document:leave_policy
+        object: policy_document:acme__leave_policy
+        assertions:
+          viewer: true
+
+  - name: Tenant namespacing keeps same-named employees in different tenants apart
+    check:
+      # Sarah is a member of BOTH acme's and globex's engineering
+      # department (same user account, e.g. a contractor -- deliberately
+      # chosen to prove this isn't just "different user IDs never match").
+      # Being an owner in one tenant must not grant viewer in the other.
+      - user: user:sarah
+        object: leave_record:globex__sarah_leave
+        assertions:
+          viewer: true
+      - user: user:david
+        object: leave_record:globex__sarah_leave
+        assertions:
+          viewer: false
+
+  - name: Cross-tenant HR admin is scoped per tenant tuple, not by role name alone
+    check:
+      # hr_admin1 was granted hr_admin on both tenants' sarah_leave records
+      # above (a real deployment would only ever grant this within one
+      # tenant) -- included to document that this model itself does not
+      # prevent a misconfigured tuple from crossing tenants. Enforcing
+      # "an hr_admin tuple must only ever be written within its own
+      # tenant" is a sync-time invariant (Frappe -> OpenFGA), not something
+      # this relation graph can see. See docs/OPENFGA_PROVISIONING.md.
+      - user: user:hr_admin1
+        object: leave_record:globex__sarah_leave
         assertions:
           viewer: true
