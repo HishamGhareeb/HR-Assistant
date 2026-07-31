@@ -5,6 +5,7 @@ openfga-sdk
 llm-guard
 langfuse
 pydantic
+prometheus-client
 pyjwt[crypto]
 python-dotenv
 pyyaml
