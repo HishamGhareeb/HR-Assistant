@@ -4,6 +4,9 @@ are wired together -- every delivery channel (WhatsApp, etc.) just calls
 `handle_question`."""
 from __future__ import annotations
 
+import asyncio
+import json
+from dataclasses import asdict
 from dataclasses import dataclass
 
 from .claude_client import AssistantResponse, ClaudeClient, Suggestion
@@ -39,7 +42,7 @@ class Pipeline:
         self._tracer = tracer
 
     async def handle_question(self, user_id: str, question: str) -> PipelineResult:
-        trace = self._tracer.trace_request(user_id, question)
+        trace = self._tracer.trace_request()
 
         candidates = await self._onyx.search(question)
         trace.span(name="onyx-retrieval", output={"candidate_count": len(candidates)})
@@ -51,15 +54,46 @@ class Pipeline:
             trace.span(name="result", output={"answer": NO_INFO_RESPONSE})
             return PipelineResult(answer=NO_INFO_RESPONSE, suggestions=[], blocked=False)
 
-        response: AssistantResponse = self._claude.answer(question, [d.chunk for d in authorized])
-        trace.generation(name="claude-answer", output=response.answer)
-
-        sanitized, is_valid = self._guard.scan(question, response.answer)
+        response: AssistantResponse = await asyncio.to_thread(
+            self._claude.answer,
+            question,
+            [d.chunk for d in authorized],
+        )
+        # Never record raw model output before it passes the safety scan.
+        # Suggestions are user-visible output too, so the complete payload is
+        # scanned as one unit.
+        generated_output = json.dumps(
+            {
+                "answer": response.answer,
+                "suggestions": [asdict(suggestion) for suggestion in response.suggestions],
+            },
+            ensure_ascii=False,
+        )
+        sanitized_output, is_valid = await asyncio.to_thread(
+            self._guard.scan,
+            question,
+            generated_output,
+        )
         trace.span(name="llm-guard-scan", output={"is_valid": is_valid})
 
         if not is_valid:
+            trace.generation(name="claude-answer", output={"blocked": True})
             trace.span(name="result", output={"answer": BLOCKED_RESPONSE, "blocked": True})
             return PipelineResult(answer=BLOCKED_RESPONSE, suggestions=[], blocked=True)
 
-        trace.span(name="result", output={"answer": sanitized, "blocked": False})
-        return PipelineResult(answer=sanitized, suggestions=response.suggestions, blocked=False)
+        # Use the scanner's value, never the original model object, for both
+        # delivery and observability.  If a scanner returns malformed JSON,
+        # fail closed instead of risking an unscanned partial response.
+        try:
+            safe_payload = json.loads(sanitized_output)
+            safe_answer = safe_payload["answer"]
+            safe_suggestions = [Suggestion(**item) for item in safe_payload["suggestions"]]
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            trace.generation(name="claude-answer", output={"blocked": True})
+            trace.span(name="result", output={"answer": BLOCKED_RESPONSE, "blocked": True})
+            return PipelineResult(answer=BLOCKED_RESPONSE, suggestions=[], blocked=True)
+
+        safe_response = {"answer": safe_answer, "suggestions": safe_payload["suggestions"]}
+        trace.generation(name="claude-answer", output=safe_response)
+        trace.span(name="result", output={"answer": safe_answer, "blocked": False})
+        return PipelineResult(answer=safe_answer, suggestions=safe_suggestions, blocked=False)
