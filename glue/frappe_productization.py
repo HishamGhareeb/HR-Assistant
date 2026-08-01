@@ -8,7 +8,9 @@ source of truth without asking an LLM to reinterpret product boundaries.
 
 from __future__ import annotations
 
+import json
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -271,6 +273,68 @@ BAHRAIN_LAW_PACK = RalCountryLawPack(
         "Official-source citations and effective dates",
     ),
 )
+
+
+def frappe_role_fixtures() -> list[dict[str, Any]]:
+    """Build deterministic Frappe Role fixture records for the RAL app."""
+
+    return [
+        {
+            "doctype": "Role",
+            "name": role.name,
+            "role_name": role.name,
+            "desk_access": 1,
+            "disabled": 0,
+            "is_custom": 1,
+            "two_factor_auth": 0,
+            "description": role.description,
+        }
+        for role in RAL_ROLES
+    ]
+
+
+def frappe_workspace_fixtures() -> list[dict[str, Any]]:
+    """Build deterministic Frappe Workspace fixture records for the RAL app."""
+
+    fixtures: list[dict[str, Any]] = []
+    for index, workspace in enumerate(RAL_WORKSPACES, start=1):
+        fixtures.append(
+            {
+                "doctype": "Workspace",
+                "name": workspace.name,
+                "label": workspace.name,
+                "title": workspace.name,
+                "module": "RAL Platform",
+                "public": 0,
+                "is_standard": 1,
+                "sequence_id": index,
+                "for_user": "",
+                "icon": "organization",
+                "indicator_color": "blue",
+                "content": json.dumps(
+                    [
+                        {
+                            "id": f"{workspace.name.lower().replace(' ', '-')}-intro",
+                            "type": "header",
+                            "data": {"text": workspace.purpose, "col": 12},
+                        }
+                    ],
+                    separators=(",", ":"),
+                ),
+                "roles": [
+                    {
+                        "doctype": "Has Role",
+                        "role": role_name,
+                        "parent": workspace.name,
+                        "parenttype": "Workspace",
+                        "parentfield": "roles",
+                    }
+                    for role_name in workspace.required_roles
+                ],
+            }
+        )
+
+    return fixtures
 
 
 def validate_ral_productization_contract() -> list[str]:

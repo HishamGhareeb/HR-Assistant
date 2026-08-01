@@ -1,0 +1,131 @@
+[
+  {
+    "doctype": "Workspace",
+    "name": "RAL HR Command Center",
+    "label": "RAL HR Command Center",
+    "title": "RAL HR Command Center",
+    "module": "RAL Platform",
+    "public": 0,
+    "is_standard": 1,
+    "sequence_id": 1,
+    "for_user": "",
+    "icon": "organization",
+    "indicator_color": "blue",
+    "content": "[{\"id\":\"ral-hr-command-center-intro\",\"type\":\"header\",\"data\":{\"text\":\"Operational home for HR actions, suggestions, policy status, and exceptions.\",\"col\":12}}]",
+    "roles": [
+      {
+        "doctype": "Has Role",
+        "role": "RAL HR Admin",
+        "parent": "RAL HR Command Center",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      }
+    ]
+  },
+  {
+    "doctype": "Workspace",
+    "name": "RAL Payroll Bahrain",
+    "label": "RAL Payroll Bahrain",
+    "title": "RAL Payroll Bahrain",
+    "module": "RAL Platform",
+    "public": 0,
+    "is_standard": 1,
+    "sequence_id": 2,
+    "for_user": "",
+    "icon": "organization",
+    "indicator_color": "blue",
+    "content": "[{\"id\":\"ral-payroll-bahrain-intro\",\"type\":\"header\",\"data\":{\"text\":\"Bahrain payroll runs, deterministic traces, and WPS export status.\",\"col\":12}}]",
+    "roles": [
+      {
+        "doctype": "Has Role",
+        "role": "RAL Payroll Officer",
+        "parent": "RAL Payroll Bahrain",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      },
+      {
+        "doctype": "Has Role",
+        "role": "RAL HR Admin",
+        "parent": "RAL Payroll Bahrain",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      }
+    ]
+  },
+  {
+    "doctype": "Workspace",
+    "name": "RAL AI Review Inbox",
+    "label": "RAL AI Review Inbox",
+    "title": "RAL AI Review Inbox",
+    "module": "RAL Platform",
+    "public": 0,
+    "is_standard": 1,
+    "sequence_id": 3,
+    "for_user": "",
+    "icon": "organization",
+    "indicator_color": "blue",
+    "content": "[{\"id\":\"ral-ai-review-inbox-intro\",\"type\":\"header\",\"data\":{\"text\":\"Human-in-the-loop AI suggestions with citations and safe decision states.\",\"col\":12}}]",
+    "roles": [
+      {
+        "doctype": "Has Role",
+        "role": "RAL HR Admin",
+        "parent": "RAL AI Review Inbox",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      }
+    ]
+  },
+  {
+    "doctype": "Workspace",
+    "name": "RAL Compliance Center",
+    "label": "RAL Compliance Center",
+    "title": "RAL Compliance Center",
+    "module": "RAL Platform",
+    "public": 0,
+    "is_standard": 1,
+    "sequence_id": 4,
+    "for_user": "",
+    "icon": "organization",
+    "indicator_color": "blue",
+    "content": "[{\"id\":\"ral-compliance-center-intro\",\"type\":\"header\",\"data\":{\"text\":\"Country-law packs, official citations, rule versions, and audit exports.\",\"col\":12}}]",
+    "roles": [
+      {
+        "doctype": "Has Role",
+        "role": "RAL HR Admin",
+        "parent": "RAL Compliance Center",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      },
+      {
+        "doctype": "Has Role",
+        "role": "RAL Payroll Officer",
+        "parent": "RAL Compliance Center",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      }
+    ]
+  },
+  {
+    "doctype": "Workspace",
+    "name": "RAL Tenant Admin",
+    "label": "RAL Tenant Admin",
+    "title": "RAL Tenant Admin",
+    "module": "RAL Platform",
+    "public": 0,
+    "is_standard": 1,
+    "sequence_id": 5,
+    "for_user": "",
+    "icon": "organization",
+    "indicator_color": "blue",
+    "content": "[{\"id\":\"ral-tenant-admin-intro\",\"type\":\"header\",\"data\":{\"text\":\"Tenant setup, roles, entitlements, integrations, and access sync.\",\"col\":12}}]",
+    "roles": [
+      {
+        "doctype": "Has Role",
+        "role": "RAL Tenant Admin",
+        "parent": "RAL Tenant Admin",
+        "parenttype": "Workspace",
+        "parentfield": "roles"
+      }
+    ]
+  }
+]

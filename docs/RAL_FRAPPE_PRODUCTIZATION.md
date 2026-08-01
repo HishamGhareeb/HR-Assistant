@@ -48,6 +48,7 @@ The first implementation slice is a scaffold and contract, not a full Frappe ben
 - `glue.frappe_productization` defines the canonical RAL productization metadata.
 - `integrations/frappe/ral_hrms` contains the planned Frappe app structure.
 - Tests enforce that RAL roles, DocTypes, and workspaces stay branded, tenant-scoped, and deterministic.
+- Checked-in `role.json` and `workspace.json` fixtures are generated from the canonical metadata and tested for drift.
 
 ## Frappe customization strategy
 
@@ -135,7 +136,7 @@ These events should update Onyx documents and OpenFGA tuples through the HR Assi
 
 ## Recommended next PRs
 
-1. Convert the scaffold into a generated fixture manifest for roles, workspaces, and custom fields.
+1. Add custom-field and DocType fixture schemas once the durable database/tenant design lands.
 2. Add durable tenant provisioning and role sync from Frappe/RAL tenants into OpenFGA.
 3. Build the Bahrain country-law rule-pack schema with official-source citation fields.
 4. Add deterministic WPS export payload contracts and tests.

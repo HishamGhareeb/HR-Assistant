@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from glue.frappe_productization import (
     BAHRAIN_LAW_PACK,
     RAL_DOCTYPES,
@@ -5,7 +8,19 @@ from glue.frappe_productization import (
     RAL_ROLES,
     RAL_WORKSPACES,
     Ownership,
+    frappe_role_fixtures,
+    frappe_workspace_fixtures,
     validate_ral_productization_contract,
+)
+
+
+FIXTURE_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "integrations"
+    / "frappe"
+    / "ral_hrms"
+    / "ral_hrms"
+    / "fixtures"
 )
 
 
@@ -57,3 +72,15 @@ def test_workspaces_reference_existing_ral_roles() -> None:
     for workspace in RAL_WORKSPACES:
         assert workspace.name.startswith("RAL ")
         assert set(workspace.required_roles) <= role_names
+
+
+def test_checked_in_role_fixture_matches_productization_contract() -> None:
+    checked_in = json.loads((FIXTURE_DIR / "role.json").read_text(encoding="utf-8"))
+
+    assert checked_in == frappe_role_fixtures()
+
+
+def test_checked_in_workspace_fixture_matches_productization_contract() -> None:
+    checked_in = json.loads((FIXTURE_DIR / "workspace.json").read_text(encoding="utf-8"))
+
+    assert checked_in == frappe_workspace_fixtures()
