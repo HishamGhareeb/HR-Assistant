@@ -11,7 +11,8 @@ from __future__ import annotations
 import pytest
 
 from glue.onyx_client import Document
-from glue.openfga_client import OpenFgaFilter, scoped_object_id
+from glue.domain import DocumentClassification
+from glue.openfga_client import OpenFgaFilter, scoped_object_id, tenant_object_id
 
 
 class FakeSingleResponse:
@@ -69,6 +70,10 @@ def test_scoped_object_id_keeps_different_tenants_distinct():
     a = scoped_object_id("leave_record", "acme", "sarah_leave")
     b = scoped_object_id("leave_record", "globex", "sarah_leave")
     assert a != b
+
+
+def test_tenant_object_id_is_tenant_scoped_role_object():
+    assert tenant_object_id("acme") == "tenant:acme"
 
 
 # --- tenant dropping (never reaches OpenFGA) ----------------------------
@@ -206,3 +211,58 @@ async def test_item_not_present_in_response_is_treated_as_denied():
     result = await filter_.filter_authorized("sarah", [doc()], tenant_id="acme")
 
     assert result == []
+
+
+# --- pre-retrieval classification mask ------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_employee_role_gets_tenant_public_and_internal_classifications():
+    fake = FakeOpenFgaClient(FakeBatchResponse([FakeSingleResponse("employee", True)]))
+    filter_ = make_filter(fake)
+
+    result = await filter_.allowed_classifications("sarah", "acme")
+
+    assert result == (DocumentClassification.PUBLIC, DocumentClassification.INTERNAL)
+    body, _options = fake.calls[0]
+    assert {check.relation for check in body.checks} == {"employee", "manager", "hr_admin", "system_admin"}
+    assert {check.object for check in body.checks} == {"tenant:acme"}
+
+
+@pytest.mark.asyncio
+async def test_manager_role_gets_manager_only_without_hr_only():
+    fake = FakeOpenFgaClient(FakeBatchResponse([FakeSingleResponse("manager", True)]))
+    filter_ = make_filter(fake)
+
+    result = await filter_.allowed_classifications("manager-1", "acme")
+
+    assert result == (
+        DocumentClassification.PUBLIC,
+        DocumentClassification.INTERNAL,
+        DocumentClassification.MANAGER_ONLY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_hr_admin_role_gets_hr_only_and_manager_classes():
+    fake = FakeOpenFgaClient(FakeBatchResponse([FakeSingleResponse("hr_admin", True)]))
+    filter_ = make_filter(fake)
+
+    result = await filter_.allowed_classifications("hr-1", "acme")
+
+    assert result == (
+        DocumentClassification.PUBLIC,
+        DocumentClassification.INTERNAL,
+        DocumentClassification.MANAGER_ONLY,
+        DocumentClassification.HR_ONLY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_pre_retrieval_fga_failure_denies_all_classifications():
+    fake = FakeOpenFgaClient(exception=ConnectionError("openfga down"))
+    filter_ = make_filter(fake)
+
+    result = await filter_.allowed_classifications("sarah", "acme")
+
+    assert result == ()

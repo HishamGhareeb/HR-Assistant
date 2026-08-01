@@ -84,6 +84,19 @@ same object.
 
 ## Authorization filtering (`glue/openfga_client.py`)
 
+Before retrieval, `OpenFgaFilter.allowed_classifications(user_id, tenant_id)`
+checks tenant-level roles on `tenant:<tenant_id>` and turns them into an
+Onyx metadata filter:
+
+- `employee` -> `public`, `internal`
+- `manager` -> `public`, `internal`, `manager_only`
+- `hr_admin` -> `public`, `internal`, `manager_only`, `hr_only`
+- `system_admin` -> `system_confidential`
+
+If this pre-retrieval check fails, the pipeline denies all classifications and
+stops before Onyx/vector retrieval and before the LLM call. `public` is still
+tenant-scoped; it is never a cross-tenant/global visibility tier.
+
 `OpenFgaFilter.filter_authorized(user_id, documents, tenant_id=...)`:
 
 - Drops any document with no `tenant_id`, or (when the caller's

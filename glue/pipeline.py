@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 from .audit import AuditLogger
 from .claude_client import ClaudeClient
 from .context_budget import fit_to_budget
-from .domain import Identity, Suggestion
+from .domain import DocumentClassification, Identity, Suggestion
 from .llm_guard_scan import OutputScanner
 from .model_response import ModelResponseValidationError, validate_model_response
 from .observability import Metrics, safe_call
@@ -140,7 +140,29 @@ class Pipeline:
         blocked = False
 
         try:
-            candidates = await self._retrieve(question, identity.tenant_id)
+            allowed_classifications = await self._allowed_classifications(identity)
+            if trace is not None:
+                safe_call(
+                    lambda: trace.span(
+                        name="pre-retrieval-access",
+                        output={"allowed_classifications": [c.value for c in allowed_classifications]},
+                    ),
+                    component="langfuse",
+                )
+            if not allowed_classifications:
+                model_outcome = "no_info"
+                answer = NO_INFO_RESPONSE
+                if trace is not None:
+                    safe_call(
+                        lambda: trace.span(
+                            name="result",
+                            output={"model_outcome": model_outcome, "authorized_count": 0, "blocked": False},
+                        ),
+                        component="langfuse",
+                    )
+                return PipelineResult(answer=answer, suggestions=[], blocked=False)
+
+            candidates = await self._retrieve(question, identity.tenant_id, allowed_classifications)
             retrieval_count = len(candidates)
             if trace is not None:
                 safe_call(
@@ -160,7 +182,13 @@ class Pipeline:
                 model_outcome = "no_info"
                 answer = NO_INFO_RESPONSE
                 if trace is not None:
-                    safe_call(lambda: trace.span(name="result", output={"answer": answer}), component="langfuse")
+                    safe_call(
+                        lambda: trace.span(
+                            name="result",
+                            output={"model_outcome": model_outcome, "authorized_count": 0, "blocked": False},
+                        ),
+                        component="langfuse",
+                    )
                 return PipelineResult(answer=answer, suggestions=[], blocked=False)
 
             budget = fit_to_budget([doc.chunk for doc in authorized], max_tokens=self._context_max_tokens)
@@ -282,10 +310,30 @@ class Pipeline:
                 error_class=error_class,
             )
 
-    async def _retrieve(self, question: str, tenant_id: str) -> list[Document]:
+    async def _allowed_classifications(self, identity: Identity) -> tuple[DocumentClassification, ...]:
+        try:
+            return await call_with_timeout(
+                self._openfga.allowed_classifications(identity.user_id, identity.tenant_id),
+                timeout_seconds=self._openfga_timeout_seconds,
+                stage="pre-retrieval-access",
+            )
+        except Exception:
+            logger.exception(
+                "pre_retrieval_access_failed user_id=%s tenant_id=%s -- denying all",
+                identity.user_id,
+                identity.tenant_id,
+            )
+            return ()
+
+    async def _retrieve(
+        self,
+        question: str,
+        tenant_id: str,
+        allowed_classifications: tuple[DocumentClassification, ...],
+    ) -> list[Document]:
         async def attempt() -> list[Document]:
             return await call_with_timeout(
-                self._onyx.search(question, tenant_id=tenant_id),
+                self._onyx.search(question, tenant_id=tenant_id, allowed_classifications=allowed_classifications),
                 timeout_seconds=self._onyx_timeout_seconds,
                 stage="onyx-retrieval",
             )

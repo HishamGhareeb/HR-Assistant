@@ -55,3 +55,4 @@ class Config:
         # authorized until deployment provisions explicit reviewers.
         self.suggestion_store_path = os.environ.get("SUGGESTION_STORE_PATH", ".tmp/suggestions.jsonl")
         self.hr_reviewers_json = os.environ.get("HR_REVIEWERS_JSON", "{}")
+        self.hr_admins_json = os.environ.get("HR_ADMINS_JSON", "{}")

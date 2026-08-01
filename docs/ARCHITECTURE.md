@@ -15,10 +15,10 @@ Channel / UI
 FastAPI (/v1/questions)
     |
     v
-Onyx retrieval -> OpenFGA document filter -> Claude -> LLM Guard
-                                               |
-                                               v
-                                      answer + suggestions
+OpenFGA tenant role mask -> Onyx filtered retrieval -> OpenFGA document filter -> Claude -> LLM Guard
+                                                                                 |
+                                                                                 v
+                                                                        answer + suggestions
 
 Every stage ------------------------------------------------> Langfuse
 ```
@@ -31,23 +31,26 @@ are persisted to the HR review inbox and never mutate Frappe data.
 1. The public gateway must authenticate the caller. `X-User-ID` is currently only an
    internal handoff and must not be trusted from the public internet.
 2. Retrieval is not authorization. OpenFGA is mandatory before model context is built.
+   The pipeline also resolves a tenant-scoped classification mask before Onyx
+   search, so HR-only/manager-only material is not even requested unless the
+   caller has that tenant role. `PUBLIC` means public within that authenticated
+   tenant only; it is never global or cross-tenant.
 3. Retrieved text is untrusted data and may contain prompt injection.
 4. Model output is untrusted until the output scanner passes it. Raw output is not
    sent to Langfuse before that scan. The trace never contains a raw question or
-   user identifier; it contains only operational counts/status and, on success,
-   the scanner-sanitized answer and suggestions. With incomplete Langfuse
-   credentials, tracing is a local no-op.
+   user identifier; it contains only operational counts/status. Successful
+   answer traces record suggestion count/category/status metadata only, not raw
+   answer text, suggestion reasoning, record references, or document chunks. With
+   incomplete Langfuse credentials, tracing is a local no-op.
 5. Suggestions require a human decision in the review inbox. Approval records
    the reviewer decision and immutable decision history; it does not apply the
    suggestion to Frappe or any HR source system.
+6. HR admin ingestion controls are synthetic/read-only. Resync/revoke endpoints
+   operate through `glue.frappe_sync.SyncEngine` and never mutate Frappe HR.
 
 ## Gaps before production
 
-- Implement and contract-test the Onyx search adapter.
-- Add signed authentication, tenant isolation, user provisioning, and role mapping.
-- Sync Frappe HR records to retrieval and authorization tuples reliably.
-- Replace per-document authorization checks with a bounded or batched approach.
-- Add timeouts, retries, circuit breakers, structured errors, and request IDs.
-- Add persistent audit events and retention controls independent of model tracing.
+- Replace static/dev role mappings with production user provisioning and admin controls.
+- Add persistent audit retention controls independent of model tracing.
 - Add an admin UI, employee chat UI, WhatsApp adapter, deployment manifests,
   observability, backup/restore, security tests, and customer onboarding.

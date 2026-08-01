@@ -15,6 +15,13 @@ model
 
 type user
 
+type tenant
+  relations
+    define employee: [user]
+    define manager: [user]
+    define hr_admin: [user]
+    define system_admin: [user]
+
 type department
   relations
     define member: [user]

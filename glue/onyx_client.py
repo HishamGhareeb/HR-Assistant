@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from .domain import Citation, Document as CanonicalDocument, DocumentType
+from .domain import Citation, Document as CanonicalDocument, DocumentClassification, DocumentType
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class Document:
     tenant_id: str | None = None
     source: str = "onyx"
     retrieved_at: datetime | None = None
+    classification: DocumentClassification = DocumentClassification.INTERNAL
 
     def to_canonical(self) -> CanonicalDocument:
         if self.tenant_id is None or self.retrieved_at is None:
@@ -94,7 +95,7 @@ class Document:
             tenant_id=self.tenant_id,
             retrieved_at=self.retrieved_at,
         )
-        return CanonicalDocument(citation=citation, chunk=self.chunk)
+        return CanonicalDocument(citation=citation, chunk=self.chunk, classification=self.classification)
 
 
 class _SearchDocResponse(BaseModel):
@@ -137,6 +138,7 @@ class OnyxClient:
         question: str,
         *,
         tenant_id: str | None = None,
+        allowed_classifications: list[DocumentClassification] | tuple[DocumentClassification, ...] | None = None,
     ) -> list[Document]:
         """Retrieve candidate documents for `question`.
 
@@ -150,17 +152,34 @@ class OnyxClient:
         at all is always dropped, never defaulted.
         """
         payload: dict = {"query": question}
+        allowed_values: list[str] | None = None
+        if allowed_classifications is not None:
+            allowed_values = [classification.value for classification in allowed_classifications]
+            if not allowed_values:
+                return []
+
         if tenant_id is not None:
             if not tenant_id.strip():
                 raise ValueError("tenant_id must not be blank when provided")
-            payload["filters"] = {"document_set": [f"tenant:{tenant_id.strip()}"]}
+            payload["filters"] = {
+                "document_set": [f"tenant:{tenant_id.strip()}"],
+                "metadata": {"tenant_id": [tenant_id.strip()]},
+            }
+            if allowed_values is not None:
+                payload["filters"]["metadata"]["classification"] = allowed_values
+        elif allowed_values is not None:
+            payload["filters"] = {"metadata": {"classification": allowed_values}}
 
         parsed = await self._post_search(payload)
 
         documents: list[Document] = []
         skipped = 0
         for raw in parsed.documents[: self._max_results]:
-            document = self._to_document(raw, expected_tenant_id=tenant_id)
+            document = self._to_document(
+                raw,
+                expected_tenant_id=tenant_id,
+                allowed_classifications=allowed_classifications,
+            )
             if document is None:
                 skipped += 1
                 continue
@@ -202,7 +221,12 @@ class OnyxClient:
                 f"Onyx search response did not match the expected contract: {exc}"
             ) from exc
 
-    def _to_document(self, raw: _SearchDocResponse, expected_tenant_id: str | None) -> Document | None:
+    def _to_document(
+        self,
+        raw: _SearchDocResponse,
+        expected_tenant_id: str | None,
+        allowed_classifications: list[DocumentClassification] | tuple[DocumentClassification, ...] | None,
+    ) -> Document | None:
         doc_tenant = raw.metadata.get("tenant_id")
         if not isinstance(doc_tenant, str) or not doc_tenant.strip():
             return None
@@ -218,6 +242,16 @@ class OnyxClient:
         except ValueError:
             return None
 
+        raw_classification = raw.metadata.get("classification")
+        if not isinstance(raw_classification, str):
+            return None
+        try:
+            classification = DocumentClassification(raw_classification.strip())
+        except ValueError:
+            return None
+        if allowed_classifications is not None and classification not in set(allowed_classifications):
+            return None
+
         if not raw.blurb.strip():
             return None
 
@@ -228,6 +262,7 @@ class OnyxClient:
             tenant_id=doc_tenant,
             source="onyx",
             retrieved_at=_parse_timestamp(raw.updated_at),
+            classification=classification,
         )
 
 
