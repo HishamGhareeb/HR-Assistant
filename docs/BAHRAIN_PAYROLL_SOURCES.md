@@ -16,9 +16,16 @@ sourcing layer a rule pack would be built and tested against.
   an interactive browser) and the cited text/figure was read directly off
   the page, quoted or closely paraphrased below.
 - **Listed, not yet individually verified**: the requesting ticket named
-  this law/decree as relevant. It has **not** been individually located and
-  confirmed against LLOC or SIO's search tools in this session. Do not treat
-  these as confirmed — they are a research backlog, not a citation.
+  this law/decree as relevant, and as of this document's second research
+  pass it has still **not** been individually located and confirmed against
+  a primary source. Do not treat these as confirmed — they are a research
+  backlog, not a citation. (Most items originally in this category were
+  resolved during the second pass — see §4 for current status per item.)
+- **Correction**: two items were actively wrong, not just unverified — the
+  ticket's own description of two named LMRA Board Resolutions did not
+  match what the primary source (LMRA's own legal library) actually shows.
+  These are called out explicitly in §2c rather than silently fixed, since
+  a wrong citation is more dangerous than a missing one.
 - Every "Verified" row includes the retrieval date and the exact page URL so
   the citation can be re-checked as sources change.
 
@@ -28,13 +35,14 @@ sourcing layer a rule pack would be built and tested against.
 
 | # | Portal | URL | Status | Language | Notes |
 |---|---|---|---|---|---|
-| 1 | Legislation & Legal Opinion Commission (LLOC) — legislation search | https://www.lloc.gov.bh/en/Legislation/Search | **Verified reachable** (browser; blocked via plain HTTP fetch) | EN/AR toggle | Advanced search UI confirmed: filters by legislation number, year, official gazette number, legislation type, issuing ministry/organization, and classification. This is the authoritative gazette-of-record search tool and should be the first stop for pinning exact legislation text. Keyword search execution (via on-page search box) did not return results within this session — likely requires using the structured number/year filters rather than the free-text box; flagged as follow-up. |
+| 1 | Legislation & Legal Opinion Commission (LLOC) — legislation search | https://www.lloc.gov.bh/en/Legislation/Search | **Verified reachable and functional** (browser; blocked via plain HTTP fetch) | EN/AR toggle | Advanced search UI confirmed: filters by legislation number, year, official gazette number, legislation type, issuing ministry/organization, and classification. This is the authoritative gazette-of-record search tool. **The structured legislation-number + year filters work reliably and were used to confirm five citations in §2b** (free-text keyword search still did not return results — use the structured filters, not the search box). |
 | 2 | SIO — advanced legislation search | https://www.sio.gov.bh/en/advanced-legislations-search | **Verified reachable and functional** | EN/AR toggle | Returned a live, paginated (46 pages) result set of SIO decisions/regulations when loaded. Confirms `Law No. 13 of 1975` is an actively cross-referenced SIO legislation number (see §2). |
 | 3 | SIO official portal | https://www.sio.gov.bh | **Verified reachable** (browser; blocked via plain HTTP fetch) | EN/AR toggle | Homepage exposes Legislations, Reports & Statistics, Knowledge Center (FAQs), E-Services navigation. |
-| 4 | LMRA official portal / legal library | https://lmra.gov.bh | **Verified reachable** | EN/AR toggle | |
+| 4 | LMRA official portal / legal library | https://lmra.gov.bh | **Verified reachable and functional** | EN/AR toggle | The "Legislations" nav item (`/en/page/show/221`) is a genuine legal library — see §2c. This is the single most valuable portal found this session for LMRA-specific instruments: it hosts full official PDF texts directly, not just metadata. |
 | 5 | LMRA — WPS employer obligations | https://www.lmra.gov.bh/en/page/show/638 | **Verified reachable and read** (browser; blocked via plain HTTP fetch) | EN | See §3. |
 | 6 | LMRA blog — Enhanced WPS announcement | https://blog.lmra.gov.bh/en/2025/10/21/lmra-launches-the-enhanced-wages-protection-system/ | **Verified reachable and read** (plain fetch succeeded) | EN | See §3. |
 | 7 | BENEFIT — WPS 2.0 overview | https://benefit.bh/others/wps/Default | **Verified reachable and read** (browser; blocked via plain HTTP fetch) | EN | See §3. |
+| 8 *(discovered this session, not in the original ticket list)* | LMRA Legislations hub | https://www.lmra.gov.bh/en/page/show/221 | **Verified reachable and functional** | EN (Arabic-only items also present) | Links to six sub-categories: The Law and Amendments, Decrees, Board of Directors Resolutions, Cabinet Resolutions Regarding LMRA Fees, Resolutions of Other Entities Related to LMRA Duties, Legislations on Cybersecurity — plus standalone "Labour Law" and "Personal Data Protection Law" pages. See §2c for what was found here. |
 
 **Operational note for future automation against these portals**: LLOC, SIO,
 and most LMRA pages return HTTP 403 to simple/automated HTTP clients (bot
@@ -100,6 +108,96 @@ fetch path, not a bare HTTP client.
 
 ---
 
+## 2b. Verified citations — LLOC gazette-of-record legislation search
+
+All five rows below were confirmed using LLOC's **structured** search
+(`Legislation number` + `Year` fields, not the free-text keyword box) at
+https://www.lloc.gov.bh/en/Legislation/Search, retrieved 2026-08-01. Each
+result is the exact title/date/gazette-number LLOC's own database returns
+for that legislation number and year — this is the closest this session got
+to the actual gazette-of-record, one level more authoritative than SIO's or
+LMRA's own paraphrased summary pages in §2/§3.
+
+| Legislation number searched | Exact LLOC title returned | Date | Official Gazette No. | Confirms |
+|---|---|---|---|---|
+| 24 / 1976 | *(found via an amending law's title, not a direct hit — see note)* Law No. (44) of 2014 amending article (39) from Social Insurance Law promulgated by **Legislative Decree No. (24) of 1976** | 22-July-1976 (gazette date shown for the underlying 1976 instrument) | 1184 | **Decree-Law No. (24) of 1976 = "Social Insurance Law"** — the ticket's identification is correct. The original 1976 decree's own standalone LLOC record was not opened directly; this citation comes from a 2014 amending law's title that names it. Full original text still not retrieved — see §5. |
+| 78 / 2006 | LAW NO. (78) OF 2006 WITH RESPECT TO INSURANCE AGAINST UNEMPLOYMENT | 23-November-2006 | 2766 | **Exact match** to the ticket's description. |
+| 21 / 2020 | Legislative Decree No. (21) of 2020 regarding Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations | 16-July-2020 | 3480 | Matches the ticket's "pension/social insurance unification" description. (Three unrelated "Decision No. (21) of 2020" items — judicial council, financial services, CBB supervision — also matched this number/year and are *not* this legislation; recorded here only to note the search returns same-numbered instruments from different issuing bodies in the same year.) |
+| 19 / 2006 | LAW NO. (19) OF 2006 WITH RESPECT TO REGULATING THE LABOUR MARKET | 31-May-2006 | 2741 | **Exact match** — confirms this as the LMRA founding law. |
+| 16 / 2021 | Legislative Decree No. (16) of 2021 amending certain provisions of the Labour Law for the Private Sector promulgated by **Law No. (36) of 2012** | 5-August-2021 | 3544 | **Exact match**, and independently *re-confirms* Law No. (36) of 2012 as "the Labour Law for the Private Sector" (second, independent source for that fact — see §3). |
+
+**Status of all five**: legislation number, year, exact title, gazette date,
+and gazette number confirmed via LLOC's own database. **Not yet
+retrieved**: the actual PDF/full text of any of these five instruments —
+LLOC's search results list metadata (title/date/gazette number) but this
+session did not open an individual result to reach the full legislative
+text. That remains a follow-up before any of these could back an actual
+rule-pack parameter.
+
+---
+
+## 2c. Verified citations — LMRA's own legal library (full official texts)
+
+LMRA hosts its own legal library directly on its site: **The Authority →
+Legislations** (`https://www.lmra.gov.bh/en/page/show/221`), broken into
+"The Law and Amendments," "Decrees," "Board of Directors Resolutions,"
+"Cabinet Resolutions Regarding LMRA Fees," "Resolutions of Other Entities
+Related to LMRA Duties," and "Legislations on Cybersecurity" /
+"Labour Law" / "Personal Data Protection Law." This is a **more
+authoritative source than LLOC's metadata-only search results in §2b** for
+LMRA-specific instruments — it hosts full official PDF texts directly,
+not just title/date/gazette-number metadata.
+
+| Field | Value |
+|---|---|
+| **Title** | Act No. (19) of 2006 with regard to the Regulation of the Labour Market |
+| **Full text** | **Direct PDF**: https://www.lmra.gov.bh/files/cms/shared/file/law-no19-year2006-english%20(1).pdf (273 KB) |
+| **Landing page** | https://www.lmra.gov.bh/en/page/show/5 |
+| **Retrieved** | 2026-08-01 |
+| **Status** | **Verified — full official text located and directly downloadable** (PDF not opened/read in this session; link confirmed live). This is a stronger source than the LLOC metadata record in §2b for the same law. |
+
+| Field | Value |
+|---|---|
+| **Title** | Labour Law (Law No. 36 of 2012, Private Sector) |
+| **Full text** | **Direct PDF**: https://www.lmra.gov.bh/files/cms/shared/file/labour%20law.pdf (450 KB) |
+| **Landing page** | https://www.lmra.gov.bh/en/page/show/199 |
+| **Retrieved** | 2026-08-01 |
+| **Key verified facts (quoted)** | "On July 26, 2012, the King of the Kingdom of Bahrain issued a new labour law No. 36 of 2012 **replacing the old labour law (No. 23 of 1976)**." — a new fact not seen elsewhere in this session: the predecessor law was Law No. 23 of 1976, not yet independently verified beyond this one mention. |
+| **Arabic-primacy statement (verbatim, official)** | "This is unofficial translation, in case of difference between the Arabic and the English text, **the Arabic text shall prevail**." This is LMRA's own explicit statement — the strongest, most direct confirmation found this session of the ticket's "mark Arabic gazette/legal text as authoritative where English is only a translation/reference" requirement. |
+| **Status** | **Verified — full official text located, with an explicit official Arabic-primacy statement.** Third independent confirmation of Law No. 36 of 2012 as the Private Sector Labour Law (after §2b and §3). |
+
+### LMRA Board of Directors Resolutions — full list, with a correction to the ticket's descriptions
+
+The full "Board of Directors Resolutions" list
+(`https://www.lmra.gov.bh/en/legal/category/1`, retrieved 2026-08-01, "Last
+Update" dates per-item as shown) contains 19 items. The two specifically
+named in the ticket **do not match the ticket's stated subject matter** —
+this is an important correction, not a confirmation:
+
+| What the ticket said | What LMRA's own list actually shows for that number/year | Assessment |
+|---|---|---|
+| "LMRA Board Resolution No. (1) of 2022 on work permits" | قرار رقم (1) لسنة 2022 بشأن إسناد بعض مهام هيئة تنظيم سوق العمل إلى مراكز تسجيل العمالة وتعديلاته (Arabic only) — **"Resolution No. (1) of 2022 regarding the assignment of some tasks of the Labour Market Regulatory Authority to labour registration centres and its amendments"** | **Does not match** — this resolution is about delegating LMRA administrative tasks to registration centres, not work permits. Matches the unrelated LLOC hit found in §4 (same number/year, same subject). |
+| "LMRA Board Resolution No. (2) of 2014 regarding domestic workers" | قرار رقم (2) لسنة 2014 بشأن تنظيم تصاريح مزاولة صاحب العمل الأجنبي للأنشطة المهنية وتعديلاته (Arabic only) — **"Resolution No. (2) of 2014 regarding the regulation of permits for the foreign employer's practice of professional activities and its amendments"** | **Does not match** — this is about foreign-employer professional-activity permits, not domestic workers. Confirms the LLOC finding in §4. |
+
+**The actual domestic-workers instrument appears to exist under a
+different number**: the same list includes **"Order No. (4) of 2014 With
+regard to Regulation of Work Permits for Domestic Servants and
+Equivalent"** — this, not "Resolution No. (2) of 2014," is the likely
+correct citation for domestic-worker work permits. Not yet opened/read in
+this session; recorded here as the corrected lead for follow-up.
+
+**The general (non-domestic) work-permit regulation** also appears on this
+list: "Decision No. (76) (2008) Regarding Regulating Work Permits for
+Expatriate Employees Other than the category of Domestic Employees and its
+Amendments."
+
+**Recommendation**: treat the ticket's "LMRA Board Resolution No. (1) of
+2022" and "No. (2) of 2014" descriptions as unreliable and supersede them
+with this section. Do not carry the ticket's original descriptions into any
+future rule-pack citation.
+
+---
+
 ## 3. Verified citations — LMRA / Wages Protection System (WPS)
 
 | Field | Value |
@@ -137,22 +235,24 @@ fetch path, not a bare HTTP client.
 
 ---
 
-## 4. Listed by the ticket, **not yet individually verified** this session
+## 4. Legislation named in the ticket — verification status per item
 
-These are named in HIS-50's brief as core legislation to collect. None of
-them were individually located and confirmed against LLOC or SIO's search
-tools in this session — they are recorded here as the research backlog, not
-as confirmed citations. **Do not use any of these as a rule-pack parameter
-source until independently verified.**
+These are named in HIS-50's brief as core legislation to collect. Most were
+subsequently confirmed via LLOC (§2b) or LMRA's own legal library (§2c) in
+a second research pass — this table is the up-to-date status per item, not
+a stale "not yet found" list. Rows still marked unconfirmed, and the two
+rows where **the ticket's own description turned out to be wrong**, are
+called out explicitly. **Do not use any "not yet confirmed" row as a
+rule-pack parameter source.**
 
 ### SIO / social insurance
 
 | Legislation | Ticket's description | Verification status |
 |---|---|---|
-| Decree-Law No. (24) of 1976 | Social Insurance Law / private sector | Not yet located via LLOC/SIO search this session. The SIO EOSB FAQ references "the Social Insurance Law" by name without a decree number on that page (§2), consistent with but not confirming this specific decree number. |
+| Decree-Law No. (24) of 1976 | Social Insurance Law / private sector | **Confirmed** via LLOC (§2b) — title "Social Insurance Law" attached to this exact decree number/year. Full original text still not retrieved. |
 | Law No. (13) of 1975 | Pensions and retirement benefits, civil servants / public sector | **Existence confirmed** via SIO search result (§2); full text not retrieved. |
-| Law No. (78) of 2006 | Insurance Against Unemployment | Not yet located this session. |
-| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | Not yet located this session. |
+| Law No. (78) of 2006 | Insurance Against Unemployment | **Confirmed** via LLOC (§2b) — exact title match. |
+| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Confirmed** via LLOC (§2b) — "Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations" matches this description. Amendments not individually enumerated. |
 | 2023–2024 expatriate EOSB decrees/decisions | SIO-managed non-Bahraini EOSB | Decision No. (109) of 2023 identified (§2) as the specific instrument named on SIO's own EOSB page; other 2023-2024 decrees/decisions not enumerated this session. |
 | SIO employer directives — monthly wage reporting/contribution shares | — | Not yet located this session; likely reachable via SIO E-Services/employer guides, not yet browsed. |
 
@@ -160,12 +260,12 @@ source until independently verified.**
 
 | Legislation | Ticket's description | Verification status |
 |---|---|---|
-| Law No. (19) of 2006 | Labour Market Regulation / LMRA founding law | Not yet located this session. |
-| Law No. (36) of 2012 | Labour Law for the Private Sector | **Confirmed** — directly cited by LMRA's own WPS obligations page (§3). |
-| Legislative Decree No. (16) of 2021 | Amendment | Not yet located this session. |
-| LMRA Board Resolution No. (1) of 2022 | Work permits | Not yet located this session. |
-| LMRA Board Resolution No. (2) of 2014 | Domestic workers | Not yet located this session. |
-| Flexible work permits / worker mobility / quota-ceiling regulations | — | Not yet located this session. |
+| Law No. (19) of 2006 | Labour Market Regulation / LMRA founding law | **Confirmed** via LLOC (§2b) — exact title match. |
+| Law No. (36) of 2012 | Labour Law for the Private Sector | **Confirmed twice, independently** — LMRA's own WPS obligations page (§3) and LLOC's record for Legislative Decree 16/2021 (§2b) both name it as "the Labour Law for the Private Sector." |
+| Legislative Decree No. (16) of 2021 | Amendment | **Confirmed** via LLOC (§2b) — exact title match ("amending certain provisions of the Labour Law for the Private Sector"). |
+| LMRA Board Resolution No. (1) of 2022 | Work permits | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about assigning LMRA administrative tasks to labour registration centres, not work permits. |
+| LMRA Board Resolution No. (2) of 2014 | Domestic workers | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about foreign-employer professional-activity permits, not domestic workers. The likely correct instrument is **Order No. (4) of 2014 "Regulation of Work Permits for Domestic Servants and Equivalent"** (title read from LMRA's own list; full text not yet opened). |
+| Flexible work permits / worker mobility / quota-ceiling regulations | — | Not yet located by name this session. LMRA's Board of Directors Resolutions list (§2c) is now known and enumerable — a full pass through all 19 entries (several "Arabic Only") for flexible-permit/mobility/quota content is a concrete, bounded follow-up rather than open-ended search. |
 
 ### Supplementary operational guidance (not legal text)
 
@@ -180,17 +280,34 @@ guides.
 
 ## 5. Explicit non-findings and blockers
 
-- **LLOC keyword search**: the free-text search box on
-  `lloc.gov.bh/en/Legislation/Search` did not return visible results within
-  this session when a keyword ("Social Insurance Law") was entered and
-  submitted via Enter. The page's structured filters (legislation
-  number/year, gazette number, type, ministry) are present and are the more
-  likely reliable path — e.g. searching number=`24`, year=`1976` directly —
-  but that path was not completed this session. **Follow-up required**
-  before Decree-Law No. (24) of 1976 can be marked verified.
+- **LLOC keyword search still does not work**: the free-text search box on
+  `lloc.gov.bh/en/Legislation/Search` never returned visible results in this
+  session. **This is now resolved as a non-issue**: the structured filters
+  (`Legislation number` + `Year`) work reliably and were used to confirm
+  five citations in §2b — use those fields, not the search box.
+- **Original 1976 Social Insurance Law standalone record**: Decree-Law No.
+  (24) of 1976 was confirmed (§2b) only via a 2014 amending law's title that
+  names it — its own standalone LLOC record was not opened directly. Same
+  gap for Law No. (13) of 1975 (§2, existence confirmed via SIO search
+  result only).
+- **Full text of five LLOC-confirmed instruments not retrieved**: §2b's
+  five rows (Decree-Law 24/1976, Law 78/2006, Legislative Decree 21/2020,
+  Law 19/2006, Legislative Decree 16/2021) are confirmed at the
+  title/date/gazette-number level from LLOC, but their full legislative
+  text was not opened from LLOC itself in this session — **two of the five
+  (Law 19/2006 and Law 36/2012) now have a full-text PDF via §2c instead**,
+  which is the better citation to use going forward.
 - **Decision No. (109) of 2023 full text**: named and its title quoted
   exactly from SIO's official EOSB page, but the actual gazette/decision PDF
   or full text was not located/opened this session.
+- **The ticket's descriptions for two LMRA Board Resolutions were wrong**,
+  not just unverified — see §2c. This is worth flagging distinctly from a
+  simple "not found": a wrong citation is more dangerous than a missing one
+  if it had been carried forward into a rule pack unchecked.
+- **"Order No. (4) of 2014" (domestic-worker work permits) full text**: title
+  read from LMRA's Board Resolutions list; the instrument itself has not
+  been opened/read this session — flagged as the corrected follow-up lead
+  (§2c, §4).
 - **Automated (non-browser) fetch is blocked** on `sio.gov.bh`,
   `lmra.gov.bh`, `lloc.gov.bh`, and `benefit.bh` (HTTP 403 from bot
   protection). All content in this document was retrieved via an
@@ -203,20 +320,25 @@ guides.
 
 Per HIS-50's acceptance criteria and the architecture handoff's invariant
 that payroll/compliance calculations must be deterministic and
-citation-backed, not LLM-derived: **every numeric figure in §2 and §3 above
-is a direct quote or close paraphrase of text read from the cited official
-page in this session**, not a figure recalled from training data. Any
-statutory number needed for a future rule pack that is *not* backed by a row
-in §2 or §3 must be treated as unverified and blocked — see §4 — until
-independently sourced the same way.
+citation-backed, not LLM-derived: **every numeric figure and quoted legal
+title in §2, §2b, §2c, and §3 above is a direct quote or close paraphrase
+of text read from the cited official page in this session**, not a figure
+recalled from training data. Any statutory number needed for a future rule
+pack that is *not* backed by a row in one of those sections must be treated
+as unverified and blocked — see §4 — until independently sourced the same
+way. This discipline is also what caught the two wrong LMRA Board
+Resolution descriptions in §2c: verifying against the primary source, not
+trusting the ticket's own summary, is what surfaced the error.
 
 ## 7. Suitability for downstream use
 
 Per the ticket's acceptance criteria ("output is suitable for later
 ingestion into the AI knowledge base and deterministic rule-pack tests"):
-this document's §2 and §3 tables are structured with a stable field set
-(rule family, title/document number, issuing body, source URL, language,
-retrieved date, status) suitable for direct ingestion as retrieval-indexed
-policy documents or as fixture data for future rule-pack unit tests. No
-payroll calculation logic, parameter defaults, or code changes are
-introduced by this document.
+this document's §2, §2b, §2c, and §3 tables are structured with a stable
+field set (rule family, title/document number, issuing body, source URL,
+language, retrieved date, status) suitable for direct ingestion as
+retrieval-indexed policy documents or as fixture data for future rule-pack
+unit tests. §2c additionally provides direct, official, full-text PDF URLs
+for two core laws (No. 19/2006, No. 36/2012) — a stronger citation than
+title/date/gazette-number metadata alone. No payroll calculation logic,
+parameter defaults, or code changes are introduced by this document.
