@@ -171,6 +171,54 @@ useful operational note for a future ingestion pipeline.
 
 ---
 
+## 2a-bis. Fifth research pass — remaining LLOC full-text links, and a new LMRA fee schedule
+
+**LLOC's search-result UI note (operational)**: the earlier passes only read
+LLOC's structured search results as metadata (title/date/gazette number).
+This pass discovered that **clicking the "+" next to a result row expands
+it to reveal direct download links**: an English `.docx`, an Arabic
+`.pdf` (scanned image), and an Arabic HTML text version. The English
+`.docx` files could not be opened/read inline in this browser session
+(they trigger a file download rather than rendering), but the **direct
+URLs are confirmed live** and are a stronger citation than title/metadata
+alone — a future ingestion pipeline should fetch and parse these directly
+rather than re-deriving them.
+
+| Field | Value |
+|---|---|
+| **Title** | Legislative Decree No. (21) of 2020 regarding Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations |
+| **Direct links** | English (docx, 18.64 KB): https://www.lloc.gov.bh/FullEn/L2120.docx · Arabic (PDF, 123.87 KB): https://www.lloc.gov.bh/PDF/L2120.pdf · Arabic (HTML text): https://www.lloc.gov.bh/Legislation/HTM/L2120 |
+| **Category (per LLOC)** | Pension and Social Insurance Legislation |
+| **Retrieved** | 2026-08-02 |
+| **Status** | **Direct full-text links confirmed live; document content not opened/parsed this session** (docx triggers download, not inline render). This closes the previous pass's "not located anywhere" gap to "located, not yet parsed." |
+
+| Field | Value |
+|---|---|
+| **Title** | Legislative Decree No. (16) of 2021 amending certain provisions of the Labour Law for the Private Sector promulgated by Law No. (36) of 2012 |
+| **Direct links** | English (docx, 18.76 KB): https://www.lloc.gov.bh/FullEn/L1621.docx · Arabic (PDF, 83.33 KB): https://www.lloc.gov.bh/PDF/L1621.pdf · Arabic (HTML text): https://www.lloc.gov.bh/Legislation/HTM/L1621 |
+| **Category (per LLOC)** | Human Rights Legislation; Labour and Workers Legislation; Women's and Children's Legislation |
+| **Confirms** | LLOC's own UI explicitly labels this "an amendment of: LAW NO. (36) OF 2012 PROMULGATING THE LABOUR LAW FOR THE PRIVATE SECTOR" — a third independent confirmation of Law 36/2012 as the Private Sector Labour Law (after §2c and §3). |
+| **Retrieved** | 2026-08-02 |
+| **Status** | **Direct full-text links confirmed live; document content not opened/parsed this session.** |
+
+| Field | Value |
+|---|---|
+| **Title** | Law No. (68) of 2006 approving the unified system for providing social insurance protection to GCC citizens working outside their own countries |
+| **Note** | SIO's dedicated page for this law (https://www.sio.gov.bh/en/insurance-protection-extension-laws) exists and names the law correctly, but its modal explicitly states **"This content will be published soon"** — SIO has not yet published the full text on this page. This is the one SIO topic-page gap found this pass; flagged as a site-side gap (re-check periodically), not a research gap. |
+| **Retrieved** | 2026-08-02 |
+| **Status** | **Existence and exact title confirmed; full text not available from SIO at this time.** |
+
+| Field | Value |
+|---|---|
+| **Title** | Resolution No. (1) for the year 2017 Regarding Fees Imposed by the Labour Market Regulatory Authority |
+| **Full text** | **Complete text retrieved, 4 articles.** A previously undocumented general LMRA administrative fee schedule: **5 BD** per application for registering facilities, issuing/renewing/cancelling any work permit, absence-from-work notifications, increasing permit counts, and family residency permits; **+20 BD** per transaction via the Distinguished Service Centre; **+50 BD** per transaction for an LMRA staff visit to the employer's premises. Preamble usefully cross-references and supersedes/extends five earlier fee-related resolutions by number (26/2008, 28/2008, 67/2013, 31/2014, 27/2016), giving a citation trail for Bahrain's LMRA fee history even though those earlier instruments were not individually opened. |
+| **Source page** | https://www.lmra.gov.bh/en/legal/show/97 |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | Medium-high — directly relevant if a future rule pack needs to model employer-side LMRA administrative costs (not payroll per se, but adjacent employer-cost data). |
+| **Status** | **Verified — full text retrieved.** Not previously documented in any prior pass. |
+
+---
+
 ## 2b. Verified citations — LLOC gazette-of-record legislation search
 
 All five rows below were confirmed using LLOC's **structured** search
@@ -380,7 +428,7 @@ rule-pack parameter source.**
 | Decree-Law No. (24) of 1976 | Social Insurance Law / private sector | **Fully confirmed** — full 151-article consolidated text retrieved directly from SIO (§2a), not just LLOC metadata (§2b). |
 | Law No. (13) of 1975 | Pensions and retirement benefits, civil servants / public sector | **Confirmed** — direct official Arabic PDF (58 pages) located via SIO's Public Sectors page (§2a). No English translation currently published by SIO. |
 | Law No. (78) of 2006 | Insurance Against Unemployment | **Fully confirmed** — full ~30,400-character consolidated text retrieved directly from SIO (§2a), not just LLOC metadata (§2b). |
-| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Confirmed** via LLOC (§2b) — "Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations" matches this description. Full text still not retrieved; amendments not individually enumerated. |
+| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Confirmed**, direct full-text download links located (§2a-bis) — English `.docx` and Arabic PDF/HTML confirmed live on LLOC. Files not opened/parsed this session. |
 | 2023–2024 expatriate EOSB decrees/decisions | SIO-managed non-Bahraini EOSB | **Fully confirmed** — Decision No. (109) of 2023 full text (all 15 articles) retrieved directly from SIO (§2a), including a correction to §2's FAQ-paraphrased calculation formula. Other 2023-2024 decrees/decisions not enumerated this session. |
 | SIO employer directives — monthly wage reporting/contribution shares | — | Not yet located this session; likely reachable via SIO E-Services/employer guides, not yet browsed. |
 
@@ -390,7 +438,7 @@ rule-pack parameter source.**
 |---|---|---|
 | Law No. (19) of 2006 | Labour Market Regulation / LMRA founding law | **Confirmed** via LLOC (§2b) — exact title match. |
 | Law No. (36) of 2012 | Labour Law for the Private Sector | **Confirmed twice, independently** — LMRA's own WPS obligations page (§3) and LLOC's record for Legislative Decree 16/2021 (§2b) both name it as "the Labour Law for the Private Sector." |
-| Legislative Decree No. (16) of 2021 | Amendment | **Confirmed** via LLOC (§2b) — exact title match ("amending certain provisions of the Labour Law for the Private Sector"). |
+| Legislative Decree No. (16) of 2021 | Amendment | **Confirmed**, direct full-text download links located (§2a-bis) — LLOC's own UI labels it as an amendment of Law 36/2012. Files not opened/parsed this session. |
 | LMRA Board Resolution No. (1) of 2022 | Work permits | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about assigning LMRA administrative tasks to labour registration centres, not work permits. |
 | LMRA Board Resolution No. (2) of 2014 | Domestic workers | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about foreign-employer professional-activity permits, not domestic workers. The correct instrument is **Order No. (4) of 2014 "Regulation of Work Permits for Domestic Servants and Equivalent"** — **full 12-article text now retrieved and verified**, see §2c. |
 | Wages Protection Scheme (WPS) — legal basis | Not separately named in ticket, but implied by WPS obligations | **Newly found and confirmed** (§2c, fourth pass): Resolution 68/2019 (founding resolution, full text) and Resolution 22/2021 (phased-rollout schedule, full text), both issued by the Ministry of Labour & Social Development. Previously §3 only had blog/product pages with no underlying legal citation — this closes that gap. |
@@ -436,23 +484,29 @@ guides.
   will need Arabic-text handling (OCR/translation) or a bilingual legal
   reviewer, not just an English paraphrase.
 - **Legislative Decree No. (21) of 2020 and Legislative Decree No. (16) of
-  2021 full text**: still only confirmed at the LLOC title/date/gazette-
-  number level (§2b); neither has been opened at SIO, LMRA, or LLOC itself
-  in any pass so far. This is the most concrete remaining full-text gap for
-  a future pass.
+  2021 full text — direct links now located** (§2a-bis, fifth pass): both
+  have confirmed live English `.docx` and Arabic PDF/HTML URLs on LLOC, but
+  the `.docx` files were not opened/parsed in this browser session (they
+  trigger a download rather than an inline render). A future pass with
+  file-download capability, or a pipeline step that fetches and parses
+  `.docx`, would close this the rest of the way.
+- **Law No. (68) of 2006 (GCC social insurance protection) full text**:
+  SIO's own dedicated page for this law exists and confirms the exact
+  title, but its content modal explicitly states "This content will be
+  published soon" — this is a **site-side publishing gap**, not a missed
+  search; worth re-checking periodically rather than searching harder.
 - **"Flexi Permit" / flexible-worker founding regulation not located**:
-  the fourth pass confirmed "عامل مرن" ("flexible worker") is a real LMRA
-  permit category (via a 2017 residency-correction resolution, §2c/§4),
-  but the scheme's own founding regulation was not identified or opened.
-  A targeted search of LMRA's `Ministerial Orders`/`Decisions` pages
-  (not yet systematically checked — only the "Board of Directors
-  Resolutions" and "Resolutions of Other Entities" categories have been
-  reviewed so far) is the concrete next step.
-- **LMRA `Cabinet Resolutions Regarding LMRA Fees` category
-  (`/en/legal/category/3`, note: this URL was not directly confirmed —
-  category numbering inferred from the pattern of categories 1/2/4/5
-  already visited) not yet checked** — potentially relevant if any
-  fee/quota-ceiling rules live there.
+  confirmed "عامل مرن" ("flexible worker") is a real LMRA permit category
+  (via a 2017 residency-correction resolution, §2c/§4), and the fifth pass
+  additionally checked LMRA's `Cabinet Resolutions Regarding LMRA Fees`
+  category (`/en/legal/category/3`) without finding it there either — the
+  scheme's own founding regulation remains unidentified after checking
+  three of LMRA's legal-library categories (`Board of Directors
+  Resolutions`, `Resolutions of Other Entities`, `Cabinet Resolutions
+  Regarding LMRA Fees`). LMRA's on-site keyword search (top-right search
+  box) did not return navigable results when tried this pass — may need a
+  different search approach or a direct Official Gazette search on LLOC
+  for "مرن" (Arabic "flexible") as the next concrete step.
 - **SIO employer wage-reporting directives and the WPS User Manual PDF**
   referenced by name on LMRA's WPS obligations page — still not retrieved.
 - **The ticket's descriptions for two LMRA Board Resolutions were wrong**,
