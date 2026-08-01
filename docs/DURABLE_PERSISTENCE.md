@@ -72,6 +72,7 @@ The first production persistence contract lives at:
 
 ```text
 db/migrations/0001_tenant_rls_foundation.sql
+db/migrations/0002_sync_checkpoints.sql
 ```
 
 It defines the initial production tables for:
@@ -83,6 +84,7 @@ It defines the initial production tables for:
 - suggestion decisions;
 - integration sync runs;
 - integration source statuses.
+- sync checkpoints.
 
 Every application table that carries tenant data has a composite tenant key and row-level security policy tied to:
 
