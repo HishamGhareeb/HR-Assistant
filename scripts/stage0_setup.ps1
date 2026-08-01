@@ -19,7 +19,7 @@ Write-Host "== Frappe HR =="
 if (-not (Test-Path (Join-Path $external "hrms"))) {
     git clone https://github.com/frappe/hrms (Join-Path $external "hrms")
 }
-Write-Host "Next: cd external/hrms/docker; docker compose up -d"
+Write-Host "Next: cd $(Join-Path $external 'hrms/docker'); docker compose up -d"
 Write-Host "Then check http://localhost:8000"
 
 Write-Host "== Onyx =="
@@ -27,8 +27,8 @@ $onyxInstall = Join-Path $external "onyx_install.sh"
 if (-not (Test-Path $onyxInstall)) {
     Invoke-WebRequest -Uri "https://raw.githubusercontent.com/onyx-dot-app/onyx/main/deployment/docker_compose/install.sh" -OutFile $onyxInstall
 }
-Write-Host "Run the Onyx installer with bash (Git Bash/WSL): bash external/onyx_install.sh"
+Write-Host "Run the Onyx installer with bash (Git Bash/WSL): bash $onyxInstall"
 
 Write-Host "== OpenFGA =="
-docker compose -f (Join-Path $root "docker/openfga/docker-compose.yml") up -d
+docker compose -f (Join-Path $root "compose.yaml") up -d
 Write-Host "Playground: http://localhost:3000  |  HTTP API: http://localhost:8080"
