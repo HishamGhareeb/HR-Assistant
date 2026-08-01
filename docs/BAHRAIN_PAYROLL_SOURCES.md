@@ -108,6 +108,69 @@ fetch path, not a bare HTTP client.
 
 ---
 
+## 2a. Verified citations — SIO's own full-text law library (third research pass)
+
+**Major discovery this pass**: SIO's `Legislations` nav menu is not just the
+"Advanced Legislations Search" tool used in §1/§2 — it also has dedicated
+**topic pages** (`Private Sectors`, `Public Sectors`, `Insurance Against
+Unemployment`, `Insurance Protection Extension Law`, `End Of Service
+Benefit`, `Women's rights...`), each of which links to a **"READ MORE"**
+sub-page containing the **actual full consolidated legal text**, rendered
+inline as HTML inside a modal (`<div class="modal" id="...">`), or in one
+case a direct official PDF. This is one level more authoritative than
+§2b's LLOC metadata (title/date/gazette number only) and closes several of
+the "full text not retrieved" gaps flagged in the previous two passes.
+
+**Access note**: the full text is not visible in the normal page render —
+it lives inside a Bootstrap modal that only opens on click. The reliable
+way to retrieve it is to load the sub-page in the browser, then read the
+modal `<div>`'s `innerText` directly (e.g. via `document.querySelector('#modal-id').innerText`) — the modal HTML is already present in the page source, just hidden until the "READ MORE" link is clicked. This is a
+useful operational note for a future ingestion pipeline.
+
+| Field | Value |
+|---|---|
+| **Title** | Decree Law No. (24) of 1976 Promulgating the Social Insurance Law, consolidated with its amendments |
+| **Full text** | **Complete inline text retrieved — 151 articles, ~126,400 characters**, from Article 1 ("This Law shall be cited as 'The Social Insurance Law'...") through Article 151 (penalties clause). Preamble confirms issuance: "Isa bin Salman Al Khalifa, Amir of the State of Bahrain... Issued at Al-Riffa Palace, on 2nd Rajab 1396 AH, corresponding to 29th June 1976." |
+| **Source page** | https://www.sio.gov.bh/en/private-sectors → https://www.sio.gov.bh/en/law-no-24-of-1976 (modal `#article-6-924083`) |
+| **Language** | English (site-provided translation; no Arabic-primacy statement shown on this specific modal, unlike §2c's LMRA PDF — treat Arabic Official Gazette text as authoritative per general principle in §6). |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — this is the actual consolidated statutory text, not a summary or metadata record. **This closes the "full original text not retrieved" gap noted in §5 of the previous pass.** |
+| **Status** | **Verified — full text retrieved and read.** This supersedes the LLOC-only metadata citation in §2b for this instrument. |
+
+| Field | Value |
+|---|---|
+| **Title** | Law No. (78) of 2006 with respect to Insurance Against Unemployment and its amendments |
+| **Full text** | **Complete inline text retrieved — ~30,400 characters**, from the preamble ("We, Hamad bin Isa Al Khalifa, King of the Kingdom of Bahrain, Having perused the Constitution, especially Article (38) thereof, And Law No. (13) of 1975...") through to the closing/signature block ("Issued at Rifaa Palace On 1st Thilqie'eda, 1427 Hijra, Corresponding to 22nd November, 2006"). |
+| **Source page** | https://www.sio.gov.bh/en/insurance-against-unemployment → https://www.sio.gov.bh/en/law-no-13-of-1975-818549 (modal `#law-no-78-of-2006-with-respect-to-insurance-against-unemployment2`; note the URL slug is mismatched/reused from another page — a site quirk, not a data error) |
+| **Language** | English (site-provided translation) |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — full consolidated statutory text. |
+| **Status** | **Verified — full text retrieved and read.** Supersedes the LLOC-only metadata citation in §2b for this instrument. |
+
+| Field | Value |
+|---|---|
+| **Title** | Decision No. (109) of 2023 Promulgating the Regulation of End of Service Remuneration for Non-Bahrainis Working in the Private Sector |
+| **Full text** | **Complete text retrieved — ~9,470 characters, all 15 articles** of the attached Regulation, plus the enacting Decision (4 articles) and signature block ("Prime Minister Salman bin Hamad Al Khalifa, Issued on: 28 Jumada al-Awwal 1445 AH, Corresponding: 12 December 2023"). Confirms Article Four: comes into force **1 March 2024**. |
+| **Source page** | https://www.sio.gov.bh/en/end-of-service-benefits → https://www.sio.gov.bh/en/end-of-service-benefits (modal `#law-no21`) |
+| **Language** | English (site-provided translation) |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — this is the actual gazette-derived regulation text, not the FAQ paraphrase used in §2. **This closes the "Decision No. (109) of 2023 full text not located" gap flagged in §5 of the previous pass.** |
+| **⚠ Correction to §2's FAQ-derived figure** | Article (9) of the Regulation states the remuneration is **"half a month's wages for each of the first three years of employment and one month's wages for each of the subsequent years"** — this is the authoritative wording. §2's SIO FAQ page paraphrased this as "**15 days' salary** for each year of the first three years," which is a common colloquial rendering of "half a month" but is **not the literal statutory wording** (a calendar half-month is not always exactly 15 days, and Bahraini payroll practice should confirm whether "half a month's wages" is computed as wage÷2 or as a fixed 15-day daily rate before this becomes a rule-pack parameter — flagged as an open implementation question, not resolved by source-gathering alone). The **4.2% / 8.4% contribution rates in §2 are confirmed verbatim** in Article (5) of this same text — no discrepancy there. |
+| **Also confirms** | Article (1) definitions (Law = Decree-Law 24/1976; Organization = SIO; Fund = the pension/social-insurance fund established by Legislative Decree 21/2020); Article (3) exceptions (GCC nationals under Law 68/2006; categories in Article 3 of the Law); Article (13)–(14) transition rules for employees hired before the Regulation's entry into force. |
+| **Status** | **Verified — full text retrieved and read. Supersedes §2's FAQ paraphrase as the primary citation; §2 should be read together with this correction, not relied on alone.** |
+
+| Field | Value |
+|---|---|
+| **Title** | Law No. (13) of 1975 regarding the Organization of Pensions and Retirement Benefits for Government Employees (Bahraini workers, public sector) |
+| **Full text** | **Direct official PDF located**: Arabic original, 2.7 MB, 58 pages. URL (Arabic filename, URL-encoded): `https://eservice-webprod-ir.s3.eu-west-1.amazonaws.com/uploads/القانون رقم 13 لسنة 1975 بشأن تنظيم معاشات ومكافآت التقاعد لموظفي الحكومة.pdf`. No English inline text is provided on this page ("This content will be published soon" placeholder shown instead). |
+| **Source page** | https://www.sio.gov.bh/en/public-sectors → https://www.sio.gov.bh/en/law-no-13-of-1975 (modal `#article-1-542701`) |
+| **Language** | Arabic only (official). No English translation currently published by SIO for this specific law. |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — direct official PDF, Arabic original (the authoritative text per the language-priority principle in this document). |
+| **Status** | **Verified — full official PDF located and link confirmed** (PDF not downloaded/OCR'd in this session — flagged as a follow-up if the full text needs to be machine-readable). **This closes the "Law No. 13 of 1975 full text not retrieved" gap** flagged in the previous pass's §5, though only in PDF/Arabic form, not English/inline HTML like the three laws above. |
+
+---
+
 ## 2b. Verified citations — LLOC gazette-of-record legislation search
 
 All five rows below were confirmed using LLOC's **structured** search
@@ -249,11 +312,11 @@ rule-pack parameter source.**
 
 | Legislation | Ticket's description | Verification status |
 |---|---|---|
-| Decree-Law No. (24) of 1976 | Social Insurance Law / private sector | **Confirmed** via LLOC (§2b) — title "Social Insurance Law" attached to this exact decree number/year. Full original text still not retrieved. |
-| Law No. (13) of 1975 | Pensions and retirement benefits, civil servants / public sector | **Existence confirmed** via SIO search result (§2); full text not retrieved. |
-| Law No. (78) of 2006 | Insurance Against Unemployment | **Confirmed** via LLOC (§2b) — exact title match. |
-| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Confirmed** via LLOC (§2b) — "Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations" matches this description. Amendments not individually enumerated. |
-| 2023–2024 expatriate EOSB decrees/decisions | SIO-managed non-Bahraini EOSB | Decision No. (109) of 2023 identified (§2) as the specific instrument named on SIO's own EOSB page; other 2023-2024 decrees/decisions not enumerated this session. |
+| Decree-Law No. (24) of 1976 | Social Insurance Law / private sector | **Fully confirmed** — full 151-article consolidated text retrieved directly from SIO (§2a), not just LLOC metadata (§2b). |
+| Law No. (13) of 1975 | Pensions and retirement benefits, civil servants / public sector | **Confirmed** — direct official Arabic PDF (58 pages) located via SIO's Public Sectors page (§2a). No English translation currently published by SIO. |
+| Law No. (78) of 2006 | Insurance Against Unemployment | **Fully confirmed** — full ~30,400-character consolidated text retrieved directly from SIO (§2a), not just LLOC metadata (§2b). |
+| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Confirmed** via LLOC (§2b) — "Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations" matches this description. Full text still not retrieved; amendments not individually enumerated. |
+| 2023–2024 expatriate EOSB decrees/decisions | SIO-managed non-Bahraini EOSB | **Fully confirmed** — Decision No. (109) of 2023 full text (all 15 articles) retrieved directly from SIO (§2a), including a correction to §2's FAQ-paraphrased calculation formula. Other 2023-2024 decrees/decisions not enumerated this session. |
 | SIO employer directives — monthly wage reporting/contribution shares | — | Not yet located this session; likely reachable via SIO E-Services/employer guides, not yet browsed. |
 
 ### LMRA / labour legislation
@@ -285,21 +348,32 @@ guides.
   session. **This is now resolved as a non-issue**: the structured filters
   (`Legislation number` + `Year`) work reliably and were used to confirm
   five citations in §2b — use those fields, not the search box.
-- **Original 1976 Social Insurance Law standalone record**: Decree-Law No.
-  (24) of 1976 was confirmed (§2b) only via a 2014 amending law's title that
-  names it — its own standalone LLOC record was not opened directly. Same
-  gap for Law No. (13) of 1975 (§2, existence confirmed via SIO search
-  result only).
-- **Full text of five LLOC-confirmed instruments not retrieved**: §2b's
-  five rows (Decree-Law 24/1976, Law 78/2006, Legislative Decree 21/2020,
-  Law 19/2006, Legislative Decree 16/2021) are confirmed at the
-  title/date/gazette-number level from LLOC, but their full legislative
-  text was not opened from LLOC itself in this session — **two of the five
-  (Law 19/2006 and Law 36/2012) now have a full-text PDF via §2c instead**,
-  which is the better citation to use going forward.
-- **Decision No. (109) of 2023 full text**: named and its title quoted
-  exactly from SIO's official EOSB page, but the actual gazette/decision PDF
-  or full text was not located/opened this session.
+- **Full text of LLOC-confirmed instruments — now resolved for 3 of 5**:
+  §2b's five rows (Decree-Law 24/1976, Law 78/2006, Legislative Decree
+  21/2020, Law 19/2006, Legislative Decree 16/2021) were confirmed at the
+  title/date/gazette-number level from LLOC in the second pass. This third
+  pass closed the full-text gap for **Decree-Law 24/1976 and Law 78/2006**
+  directly via SIO (§2a), and **Law 19/2006** already had a full-text PDF
+  via LMRA (§2c). **Still not retrieved in full**: Legislative Decree
+  21/2020 (pension-fund unification) and Legislative Decree 16/2021 (a
+  short amending instrument to Law 36/2012, which itself has full text via
+  §2c).
+- **Decision No. (109) of 2023 full text — resolved**: the complete
+  15-article Regulation text was retrieved directly from SIO (§2a),
+  including its coming-into-force date (1 March 2024) and a correction to
+  the §2 FAQ's "15 days" paraphrase (statutory wording is "half a month's
+  wages" — see §2a for the distinction and why it matters for a future
+  rule pack).
+- **Law No. (13) of 1975 — resolved, Arabic-only**: a direct official PDF
+  (58 pages) was located via SIO's Public Sectors page (§2a). SIO has not
+  published an English translation of this specific law; downstream use
+  will need Arabic-text handling (OCR/translation) or a bilingual legal
+  reviewer, not just an English paraphrase.
+- **Legislative Decree No. (21) of 2020 and Legislative Decree No. (16) of
+  2021 full text**: still only confirmed at the LLOC title/date/gazette-
+  number level (§2b); neither has been opened at SIO, LMRA, or LLOC itself
+  in any pass so far. This is the most concrete remaining full-text gap for
+  a future pass.
 - **The ticket's descriptions for two LMRA Board Resolutions were wrong**,
   not just unverified — see §2c. This is worth flagging distinctly from a
   simple "not found": a wrong citation is more dangerous than a missing one
@@ -334,11 +408,16 @@ trusting the ticket's own summary, is what surfaced the error.
 
 Per the ticket's acceptance criteria ("output is suitable for later
 ingestion into the AI knowledge base and deterministic rule-pack tests"):
-this document's §2, §2b, §2c, and §3 tables are structured with a stable
-field set (rule family, title/document number, issuing body, source URL,
-language, retrieved date, status) suitable for direct ingestion as
+this document's §2, §2a, §2b, §2c, and §3 tables are structured with a
+stable field set (rule family, title/document number, issuing body, source
+URL, language, retrieved date, status) suitable for direct ingestion as
 retrieval-indexed policy documents or as fixture data for future rule-pack
-unit tests. §2c additionally provides direct, official, full-text PDF URLs
-for two core laws (No. 19/2006, No. 36/2012) — a stronger citation than
-title/date/gazette-number metadata alone. No payroll calculation logic,
-parameter defaults, or code changes are introduced by this document.
+unit tests. §2a provides the **full consolidated statutory text** (not
+just metadata) for three core instruments (Decree-Law 24/1976, Law
+78/2006, Decision 109/2023) plus a direct official PDF for a fourth (Law
+13/1975); §2c additionally provides direct, official, full-text PDF URLs
+for two core laws (No. 19/2006, No. 36/2012). Between §2a and §2c, six of
+the ticket's named legislative instruments now have full-text (not just
+metadata) citations — a materially stronger sourcing base than the first
+two research passes. No payroll calculation logic, parameter defaults, or
+code changes are introduced by this document.
