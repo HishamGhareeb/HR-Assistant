@@ -13,8 +13,10 @@ The current Bahrain deterministic rule-pack gate may include:
   Resolution 68/2019.
 - SIO wage-update validation based on the parsed SIO employer wage-reporting
   guides.
-- Future EOSB logic only after the half-month-vs-15-days implementation
-  interpretation receives a human legal/payroll decision.
+- EOSB logic for non-Bahraini private-sector employees, using the human
+  payroll/legal interpretation recorded on 2026-08-02 that Decision 109/2023
+  Article 9's "half a month's wages" means monthly wage divided by two, not
+  daily wage multiplied by 15.
 
 The current gate must not include unsupported Flexi Permit or Law 68/2006
 logic.
@@ -62,6 +64,26 @@ Product rule:
 - Existing Bahrain WPS and SIO wage-update validators intentionally exclude GCC
   social-insurance-protection logic.
 
+## Decision 3: EOSB "half a month's wages" interpretation
+
+Decision: **monthly wage ÷ 2**.
+
+Reasoning:
+
+- Decision No. (109) of 2023 Article 9 uses the statutory/regulatory wording
+  "half a month's wages" for each of the first three years of employment.
+- SIO's FAQ paraphrases the same period as "15 days' salary," but the
+  regulation text is the primary source.
+- Hisham logged the human payroll/legal interpretation on 2026-08-02: implement
+  "half a month's wages" as monthly-wage based, not daily-rate based.
+
+Product rule:
+
+- Do not implement the first-three-years EOSB formula as daily wage × 15.
+- Implement it as monthly wage ÷ 2, with source citation to
+  `docs/BAHRAIN_PAYROLL_SOURCES.md` §2a / Decision 109/2023 Article 9 and the
+  2026-08-02 human interpretation note on HIS-54.
+
 ## Re-opening either exclusion
 
 Either exclusion can be reopened only when:
@@ -71,4 +93,3 @@ Either exclusion can be reopened only when:
    date, and ready/not-ready status; and
 3. a new implementation ticket is opened that explicitly references the updated
    source section.
-
