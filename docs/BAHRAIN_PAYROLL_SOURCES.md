@@ -229,6 +229,49 @@ not just title/date/gazette-number metadata.
 | **Arabic-primacy statement (verbatim, official)** | "This is unofficial translation, in case of difference between the Arabic and the English text, **the Arabic text shall prevail**." This is LMRA's own explicit statement — the strongest, most direct confirmation found this session of the ticket's "mark Arabic gazette/legal text as authoritative where English is only a translation/reference" requirement. |
 | **Status** | **Verified — full official text located, with an explicit official Arabic-primacy statement.** Third independent confirmation of Law No. 36 of 2012 as the Private Sector Labour Law (after §2b and §3). |
 
+### LMRA legal-library findings (fourth research pass)
+
+Two more LMRA legal-library categories were checked this pass —
+`Decrees` (`/en/legal/category/2`, all appointment/organizational
+decrees, not legislative — nothing payroll-relevant) and `Resolutions of
+Other Entities Related to LMRA Duties` (`/en/legal/category/4` — despite
+the nav label, this category's contents are actually Ministry of Labour
+resolutions, not "other entities"; a site labeling quirk, not a data
+error). The latter contained the **actual legal foundation of the Wages
+Protection Scheme**, which §3 previously only documented via blog/product
+pages with no underlying legal citation — this is a meaningful upgrade,
+not just a new fact:
+
+| Field | Value |
+|---|---|
+| **Title** | Resolution (68) for the year 2019 Regarding the Wages Protection Scheme |
+| **Full text** | **Complete text retrieved, 6 articles.** Issuing authority: Minister of Labour & Social Development (not LMRA itself — WPS is a Ministry of Labour resolution that LMRA/BENEFIT implement). Legal basis cited: Law (19) of 2006 (labour market regulation), Law (64) of 2006 (Central Bank of Bahrain and financial institutions law), Law (36) of 2012 (private-sector labour law). Article One: "Every employer shall commit to paying the wages of his employees in accordance to the Wages Protection Scheme." Article Third(A) specifies the exact data fields employers/banks must disclose to LMRA per wage payment (employee name, ID number, wage amount, payment date, employee account number, employer account number, employer ID/CR number). |
+| **Source page** | https://www.lmra.gov.bh/en/legal/show/85 |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — this is the founding legal instrument for WPS. **This closes a real gap**: §3's WPS citations were previously blog/marketing pages only, with no underlying resolution. |
+| **Status** | **Verified — full text retrieved.** |
+
+| Field | Value |
+|---|---|
+| **Title** | Resolution (22) for the Year 2021 Regarding the Stages of Implementing the Wages Protection Scheme |
+| **Full text** | **Complete text retrieved, 3 articles.** Confirms the original phased WPS rollout: Stage One (employers with 500+ employees) from 1 May 2021; Stage Two (50–499 employees) from 1 September 2021; Stage Three (1–49 employees) from 1 January 2022, each with a 6-month grace period before violations are issued. Explicitly references and builds on Resolution 68/2019 above. |
+| **Source page** | https://www.lmra.gov.bh/en/legal/show/101 |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — this is the original phased-rollout legal instrument; note it describes the **original (2021)** WPS rollout, not the "WPS 2.0" enhancement covered in §3's blog/BENEFIT sources (Q1 2026 / January 2026 target) — the two are sequential regulatory phases of the same scheme, not duplicates. A companion "Resolution (23) for the Year 2021 Regarding Adding a Paragraph to the Second Article of Resolution (68)..." also exists in this same category (`/en/legal/show/102`) but was not opened this session. |
+| **Status** | **Verified — full text retrieved.** |
+
+**Flexible work permit ("Flexi Permit") — partial finding**: the same
+category page lists **"قرار رقم (108) لسنة 2017 بشأن تصحيح أوضاع الإقامة
+للمتقدمين لإصدار تصريح صاحب عمل (عامل مرن)"** — "Resolution No. (108) of
+2017 regarding correcting residency status for applicants for issuance of
+a 'flexible worker' (عامل مرن) employer permit." This confirms Bahrain's
+flexible-worker/"Flexi Permit" scheme is a real, LMRA-referenced legal
+category (Arabic term `عامل مرن` = "flexible worker") — **but this
+specific resolution is a residency-status correction, not the scheme's
+founding regulation**, and it is Arabic-only with no full-text captured
+this session. The scheme's own founding legal instrument was **not**
+located this pass — flagged as a remaining gap in §5.
+
 ### LMRA Board of Directors Resolutions — full list, with a correction to the ticket's descriptions
 
 The full "Board of Directors Resolutions" list
@@ -242,12 +285,23 @@ this is an important correction, not a confirmation:
 | "LMRA Board Resolution No. (1) of 2022 on work permits" | قرار رقم (1) لسنة 2022 بشأن إسناد بعض مهام هيئة تنظيم سوق العمل إلى مراكز تسجيل العمالة وتعديلاته (Arabic only) — **"Resolution No. (1) of 2022 regarding the assignment of some tasks of the Labour Market Regulatory Authority to labour registration centres and its amendments"** | **Does not match** — this resolution is about delegating LMRA administrative tasks to registration centres, not work permits. Matches the unrelated LLOC hit found in §4 (same number/year, same subject). |
 | "LMRA Board Resolution No. (2) of 2014 regarding domestic workers" | قرار رقم (2) لسنة 2014 بشأن تنظيم تصاريح مزاولة صاحب العمل الأجنبي للأنشطة المهنية وتعديلاته (Arabic only) — **"Resolution No. (2) of 2014 regarding the regulation of permits for the foreign employer's practice of professional activities and its amendments"** | **Does not match** — this is about foreign-employer professional-activity permits, not domestic workers. Confirms the LLOC finding in §4. |
 
-**The actual domestic-workers instrument appears to exist under a
-different number**: the same list includes **"Order No. (4) of 2014 With
-regard to Regulation of Work Permits for Domestic Servants and
-Equivalent"** — this, not "Resolution No. (2) of 2014," is the likely
-correct citation for domestic-worker work permits. Not yet opened/read in
-this session; recorded here as the corrected lead for follow-up.
+**The actual domestic-workers instrument exists under a different
+number, and its full text is now confirmed**: **"Order No. (4) of 2014
+With regard to Regulation of Work Permits for Domestic Servants and
+Equivalent"** — this, not "Resolution No. (2) of 2014," is the correct
+citation for domestic-worker work permits. **Full text retrieved this
+pass** (12 articles, ~11,400 characters) from
+https://www.lmra.gov.bh/en/legal/show/44, retrieved 2026-08-02. Key
+content: Article (1) definitions (Employer = any person employing a
+foreign domestic servant "in return of a salary"; scope in Article (2)
+explicitly includes planters, home security guards, babysitters, drivers,
+cooks); Article (3) sets 9 conditions for permit issuance (employer/family
+residency, salary certificate, no history of servant mistreatment,
+demonstrated need, no criminal record, medical fitness of the servant,
+etc.); Article (12) confirms the Order came into force the day after
+Official Gazette publication, issued 16 April 2014 by the Chairman of
+LMRA's Board of Directors. **This closes the domestic-worker permit gap
+entirely** — status upgraded from "title only" to "full text verified."
 
 **The general (non-domestic) work-permit regulation** also appears on this
 list: "Decision No. (76) (2008) Regarding Regulating Work Permits for
@@ -262,6 +316,17 @@ future rule-pack citation.
 ---
 
 ## 3. Verified citations — LMRA / Wages Protection System (WPS)
+
+**Legal basis (found in the fourth research pass — see §2c for full
+detail)**: WPS is not just an LMRA operational program, it has an actual
+Ministry of Labour legal foundation: **Resolution 68/2019** (founding
+resolution, full 6-article text retrieved,
+https://www.lmra.gov.bh/en/legal/show/85) and **Resolution 22/2021**
+(original phased-rollout schedule, full 3-article text retrieved,
+https://www.lmra.gov.bh/en/legal/show/101). These predate and are
+legally distinct from the "WPS 2.0" enhancement described below (which
+has no independent resolution located yet — the WPS 2.0 sources below are
+operational/product announcements, not new legislation).
 
 | Field | Value |
 |---|---|
@@ -327,8 +392,9 @@ rule-pack parameter source.**
 | Law No. (36) of 2012 | Labour Law for the Private Sector | **Confirmed twice, independently** — LMRA's own WPS obligations page (§3) and LLOC's record for Legislative Decree 16/2021 (§2b) both name it as "the Labour Law for the Private Sector." |
 | Legislative Decree No. (16) of 2021 | Amendment | **Confirmed** via LLOC (§2b) — exact title match ("amending certain provisions of the Labour Law for the Private Sector"). |
 | LMRA Board Resolution No. (1) of 2022 | Work permits | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about assigning LMRA administrative tasks to labour registration centres, not work permits. |
-| LMRA Board Resolution No. (2) of 2014 | Domestic workers | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about foreign-employer professional-activity permits, not domestic workers. The likely correct instrument is **Order No. (4) of 2014 "Regulation of Work Permits for Domestic Servants and Equivalent"** (title read from LMRA's own list; full text not yet opened). |
-| Flexible work permits / worker mobility / quota-ceiling regulations | — | Not yet located by name this session. LMRA's Board of Directors Resolutions list (§2c) is now known and enumerable — a full pass through all 19 entries (several "Arabic Only") for flexible-permit/mobility/quota content is a concrete, bounded follow-up rather than open-ended search. |
+| LMRA Board Resolution No. (2) of 2014 | Domestic workers | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about foreign-employer professional-activity permits, not domestic workers. The correct instrument is **Order No. (4) of 2014 "Regulation of Work Permits for Domestic Servants and Equivalent"** — **full 12-article text now retrieved and verified**, see §2c. |
+| Wages Protection Scheme (WPS) — legal basis | Not separately named in ticket, but implied by WPS obligations | **Newly found and confirmed** (§2c, fourth pass): Resolution 68/2019 (founding resolution, full text) and Resolution 22/2021 (phased-rollout schedule, full text), both issued by the Ministry of Labour & Social Development. Previously §3 only had blog/product pages with no underlying legal citation — this closes that gap. |
+| Flexible work permits ("Flexi Permit") / worker mobility / quota-ceiling regulations | — | **Partially located** (§2c, fourth pass): Resolution No. (108) of 2017 confirms "عامل مرن" ("flexible worker") as a real LMRA permit category, but that specific resolution is a residency-status correction, not the scheme's founding regulation, and is Arabic-only/not opened. The scheme's own founding instrument is still not identified — remaining gap, see §5. |
 
 ### Supplementary operational guidance (not legal text)
 
@@ -374,6 +440,21 @@ guides.
   number level (§2b); neither has been opened at SIO, LMRA, or LLOC itself
   in any pass so far. This is the most concrete remaining full-text gap for
   a future pass.
+- **"Flexi Permit" / flexible-worker founding regulation not located**:
+  the fourth pass confirmed "عامل مرن" ("flexible worker") is a real LMRA
+  permit category (via a 2017 residency-correction resolution, §2c/§4),
+  but the scheme's own founding regulation was not identified or opened.
+  A targeted search of LMRA's `Ministerial Orders`/`Decisions` pages
+  (not yet systematically checked — only the "Board of Directors
+  Resolutions" and "Resolutions of Other Entities" categories have been
+  reviewed so far) is the concrete next step.
+- **LMRA `Cabinet Resolutions Regarding LMRA Fees` category
+  (`/en/legal/category/3`, note: this URL was not directly confirmed —
+  category numbering inferred from the pattern of categories 1/2/4/5
+  already visited) not yet checked** — potentially relevant if any
+  fee/quota-ceiling rules live there.
+- **SIO employer wage-reporting directives and the WPS User Manual PDF**
+  referenced by name on LMRA's WPS obligations page — still not retrieved.
 - **The ticket's descriptions for two LMRA Board Resolutions were wrong**,
   not just unverified — see §2c. This is worth flagging distinctly from a
   simple "not found": a wrong citation is more dangerous than a missing one
