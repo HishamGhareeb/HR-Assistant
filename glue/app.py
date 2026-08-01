@@ -43,6 +43,7 @@ from .suggestions import (
     SuggestionStore,
     SuggestionTransitionError,
 )
+from .tenant_role_sync import TenantRoleSyncer
 from .tracer import Tracer
 
 
@@ -288,6 +289,7 @@ def create_app(
     admin_store: AdminControlStore | None = None,
     admin_authorizer: HrAdminAuthorizer | None = None,
     sync_engine: SyncEngine | None = None,
+    tenant_role_syncer: TenantRoleSyncer | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -301,6 +303,7 @@ def create_app(
         app.state.admin_store = admin_store
         app.state.admin_authorizer = admin_authorizer
         app.state.sync_engine = sync_engine
+        app.state.tenant_role_syncer = tenant_role_syncer
         yield
 
     app = FastAPI(
@@ -401,6 +404,9 @@ def create_app(
                 detail="HR Assistant ingestion sync is not configured",
             )
         return active_engine
+
+    def get_tenant_role_syncer(request: Request) -> TenantRoleSyncer | None:
+        return request.app.state.tenant_role_syncer
 
     def get_identity_dependency(request: Request):
         """Lazily build (once) and cache the identity dependency from
@@ -591,6 +597,7 @@ def create_app(
         identity: Identity = Depends(get_identity),
         store: AdminControlStore = Depends(get_admin_store),
         authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+        role_syncer: TenantRoleSyncer | None = Depends(get_tenant_role_syncer),
     ) -> AdminRoleAssignmentResponse:
         authorize_hr_admin(identity, authorizer)
         assignment = store.set_role_assignment(
@@ -598,6 +605,14 @@ def create_app(
             user_id=user_id,
             roles=tuple(body.roles),
         )
+        if role_syncer is not None:
+            try:
+                await role_syncer.sync_tenant_roles(tenant_id=identity.tenant_id, store=store)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="role assignment saved but authorization sync failed; retry required",
+                ) from exc
         return AdminRoleAssignmentResponse.from_assignment(assignment)
 
     return app
