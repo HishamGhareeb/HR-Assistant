@@ -56,6 +56,34 @@ The production persistence target is PostgreSQL with database-level tenant isola
 
 SQLite does not provide production multi-tenant isolation. It must not be treated as the SaaS storage architecture.
 
+## PostgreSQL/RLS contract
+
+The first production persistence contract lives at:
+
+```text
+db/migrations/0001_tenant_rls_foundation.sql
+```
+
+It defines the initial production tables for:
+
+- tenants;
+- tenant users;
+- tenant user roles;
+- suggestions;
+- suggestion decisions;
+- integration sync runs;
+- integration source statuses.
+
+Every application table that carries tenant data has a composite tenant key and row-level security policy tied to:
+
+```sql
+current_setting('app.tenant_id', true)
+```
+
+The application must set this value from the signed identity or trusted provisioning context inside each database transaction. It must never accept tenant context from request bodies.
+
+The `tenants` table is deliberately RLS-protected with no direct tenant-scoped access policy. Tenant provisioning/service-owner workflows must be designed separately from ordinary tenant-scoped application queries.
+
 ## Non-negotiable persistence rules
 
 - Route handlers must depend on protocols/interfaces, not concrete database drivers.
