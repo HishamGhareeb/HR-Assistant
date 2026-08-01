@@ -9,7 +9,7 @@ This document records the transition path so storage work does not leak into rou
 | State | Current implementation | Production status |
 |---|---|---|
 | Suggestion review inbox | In-memory, JSONL, and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
-| Admin controls | In-memory store | Transitional |
+| Admin controls | In-memory and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
 | Frappe sync checkpoints | In-memory store | Transitional |
 | Audit events | Hash-chained JSONL | Tamper-evident local sink, not WORM |
 | Authorization tuples | OpenFGA | External authorization store |
@@ -29,6 +29,17 @@ It preserves:
 - no route-handler storage coupling.
 
 It is intentionally not the final production database layer. It is a low-risk bridge that proves the store contract can survive process restarts before the PostgreSQL/RLS implementation lands.
+
+`glue.sqlite_admin_controls.SqliteAdminControlStore` adds the same bridge for HR admin controls.
+
+It preserves:
+
+- tenant-scoped role assignments;
+- tenant-scoped sync run history;
+- latest source status per tenant/source pair;
+- visible failed sync runs that remain retryable;
+- synthetic revoke/resync behavior through the existing `SyncEngine`;
+- no Frappe write path.
 
 ## Production target
 
