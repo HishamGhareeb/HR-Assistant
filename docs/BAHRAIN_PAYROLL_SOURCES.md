@@ -219,6 +219,96 @@ rather than re-deriving them.
 
 ---
 
+## 2a-ter. Sixth research pass — parsed decree text, WPS User Manual, SIO wage-reporting guides
+
+This pass had an explicit priority order from the user: (1) parse the two
+outstanding `.docx` decrees, (2) find the WPS User Manual/schema docs,
+(3) find SIO employer wage-reporting directives, (4) leave the Flexi
+Permit regulation as unresolved rather than keep searching, (5) add a
+Ready/Not-Ready-for-rule-engine table (§8). All five are addressed below
+and in §8.
+
+**Operational unlock**: the `.docx`/PDF "download instead of render" limit
+noted in the fifth pass was **not actually a browser limitation** — it was
+solved by downloading the files directly via `curl` (with a browser-like
+User-Agent header, since these hosts block default HTTP clients) outside
+the browser tool, then parsing them locally: `.docx` via unzipping and
+reading `word/document.xml` (a docx is a zip of XML parts), and `.pdf`
+via PyMuPDF (`pymupdf`, already available in the local Python
+environment — note the machine has two Python installs; the one on
+`PATH` as `python3` is NOT the one `pip` installs into, so packages must
+be invoked via the full interpreter path, e.g.
+`/c/Users/Hisham/AppData/Local/Programs/Python/Python312/python.exe`).
+This is a durable operational note for any future ingestion pipeline:
+prefer direct download + local parsing over in-browser rendering for
+office-document and PDF citations.
+
+### (1) Legislative Decree 21/2020 — full text parsed
+
+| Field | Value |
+|---|---|
+| **Title** | Legislative Decree No. (21) of 2020 regarding Retirement Funds and Pensions in Retirement and Insurance Laws and Regulations |
+| **Full text** | **Parsed in full from the official LLOC `.docx`, 7 articles.** **Article One is the single most structurally important fact found across all six passes**: it merges the **Retirement Fund for Government Employees** (established by Law 13/1975) and the **Social Insurance Fund** (established by Decree-Law 24/1976) into one legal fund, the **"Retirement and Social Insurance Fund,"** managed by SIO. Article Two suspends annual pension increases and defines surplus-handling rules. Article Three prohibits combining pensions across the merged schemes (with an exception for disability/work-injury/family pensions in Article Three's second paragraph). Article Four gives pensioners re-entering employment two options: combine service periods, or keep the pension and pay only work-injury contributions on new employment. Article Five sets the penalty for employer non-payment of social insurance contributions: a fine of **not less than the unpaid amount and not exceeding three times that amount**. Preamble explicitly cites COVID-19-era fiscal pressure on retirement/insurance funds as the legislative motivation. Issued 13 July 2020, in force from the first day of the month after Official Gazette publication. |
+| **Source** | Downloaded directly from https://www.lloc.gov.bh/FullEn/L2120.docx (official LLOC English translation; disclaimer on the document itself states the Arabic Official Gazette text is authoritative in case of discrepancy) |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High — full official text, directly relevant to any future rule-pack logic touching pension/EOSB fund management or employer-penalty calculations. |
+| **Status** | **Fully verified — complete text parsed and read.** This closes the last remaining full-text gap for the five originally-flagged LLOC instruments. |
+
+### (2) Legislative Decree 16/2021 — full text parsed
+
+| Field | Value |
+|---|---|
+| **Title** | Legislative Law No. (16) of 2021 amending certain provisions of the Labour Law for the Private Sector promulgated by Law No. (36) of 2012 |
+| **Full text** | **Parsed in full from the official LLOC `.docx` — a short, 3-article amendment.** Article One adds a second paragraph to **Article (39)** of Law 36/2012: **"discrimination in wages between male and female workers in work of equal value is prohibited."** Article Two **repeals Articles (30) and (31)** of Law 36/2012 outright (their original content is not restated in this amending instrument — a future pass would need to open a pre-2021 copy of Law 36/2012 to see what was removed, if that matters for a rule pack). Article Three: in force the day after Official Gazette publication. Issued 2 August 2021. |
+| **Source** | Downloaded directly from https://www.lloc.gov.bh/FullEn/L1621.docx |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High for equal-pay compliance logic; the Article 30/31 repeal is a gap worth flagging if a rule pack ever needs those specific pre-2021 provisions. |
+| **Status** | **Fully verified — complete text parsed and read.** |
+
+### (3) WPS User Manual — full 41-page official operational schema retrieved
+
+| Field | Value |
+|---|---|
+| **Title** | Wage Protection System User Manual — Version 2, Issue: January 2026 |
+| **Full text** | **Downloaded and parsed in full (41 pages, ~45,000 characters).** This is the **official WPS 2.0 operational manual** — closes the "WPS User Manual PDF" gap flagged since Pass 1, and directly confirms the manual describes "WPS version 2" issued January 2026, corroborating the WPS 2.0 rollout date already cross-confirmed in §3 from LMRA blog and BENEFIT sources. Explicitly states: **"The WPS is established based on Resolution No. (68) of 2019"** — an independent, fourth confirmation of that resolution as WPS's legal basis (after §2c, §3). |
+| **Source** | https://www.lmra.gov.bh/files/cms/shared/wps-user-manual-eng%20(1).pdf, linked from https://www.lmra.gov.bh/en/page/show/638 |
+| **Key operational/schema facts extracted (useful for a future integration or rule-pack schema, not statutory rules per se)** | Salary components tracked per worker: **Fixed Salary, Social Allowance, Variable Salary** (matches the SIO wage-reporting schema found in finding (3) below — a second, independent confirmation of this three-part salary breakdown as the standard Bahraini payroll data model). Salary transfer date can be **scheduled up to 14 days before the actual transfer**. Maximum **1,000 worker records per salary file** (larger employers must split into multiple files). Roles: Wage Responsible Person (WRP), Maker, Checker — file approval requires Maker + Checker (or WRP alone). "Salary Non-payment Justification" workflow requires monthly justification with supporting documents for any non/partial payment, tracked by "WPS Commitment level" and "offense code," with per-worker fields (CPR, Fixed Salary, Variable Salary, Social Allowance, Total Amount, Transferred Amount, Payment Status). |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | High for building an actual WPS-file-generation or WPS-compliance integration — this is the closest thing to a technical spec found in any pass. Note it is an **operational manual, not primary legislation** — the legal obligations still trace back to Resolution 68/2019 (§2c). |
+| **Status** | **Verified — full text retrieved and read.** |
+
+### (4) SIO employer wage-reporting guides — located and parsed, with real business rules
+
+| Field | Value |
+|---|---|
+| **Title** | "Guide For End of Service Gratuity System for Non-Bahraini Employees" (2024) and "Employer's Guide to Updating Wages — Update One Employee's Salary" (Taminat system) |
+| **Full text** | **Both downloaded and parsed in full.** These are SIO's own operational guides for the wage-reporting service referenced but not found in earlier passes — **closes the "SIO employer wage-reporting directives" gap** open since Pass 1. Beyond UI navigation steps, they contain genuine business rules: |
+| **Salary components subject to contribution calculation (quoted)** | "basic salary, commission, percentage of sales or revenue, annual bonus, and applicable allowances (such as social allowance, housing allowance, transportation or car allowance, telephone allowance, supervision allowance, shift allowance, and nature of work allowance)." |
+| **Annual vs. monthly update distinction (quoted/paraphrased)** | "In the case of the annual update, the calculation of work injury contribution and unemployment contribution is calculated based on all specified salary components in the file. However, in the case of the monthly update, inputting all salary components will be accepted, but the end-of-service gratuity will only be calculated based on the basic salary and the social allowance." — **this is a concrete, previously-undocumented calculation-scope rule directly relevant to an EOSB/contribution rule pack**, and should be read together with Decision 109/2023's "half a month's wages" formula in §2a. |
+| **January-as-annual-update rule (from the Taminat guide, quoted/paraphrased)** | "If the update date is chosen in the month of January, this update will be considered annual, and subscriptions will be charged for it. However, if any update date other than January is chosen, it will be considered... monthly (for Tamkeen) and subscriptions will not be charged for it." — a specific, dated business rule for how SIO's own system distinguishes "annual" vs "monthly" salary updates. |
+| **Salary-file update constraints (quoted list)** | "Salary increases should not exceed **40%**. Salary decreases are **not permitted**. Adding or removing columns is not allowed... Avoid updating the CPR number, employee name, or Total Previous Earnings. Ensure that the Total Allowances Amount does not exceed the Basic Salary." Also notes an automatic system to "detect any unrealistic wages." |
+| **Source** | https://eservice-webprod-ir.s3.eu-west-1.amazonaws.com/uploads/SIO_Salary_English.pdf and .../Update_one_employees_salary.pdf, both linked from https://www.sio.gov.bh/en/sio-guides |
+| **Retrieved** | 2026-08-02 |
+| **Legal priority** | Medium-high — these are SIO's own operational/procedural guides (not primary legislation), but they state concrete numeric business rules (the 40% cap, the salary-component-scope distinction) not found in any statute text retrieved so far. Treat as authoritative for *how SIO's system behaves*, and cross-reference against Decision 109/2023 (§2a) before encoding as a hard rule-pack constant. |
+| **Status** | **Verified — full text retrieved and read.** |
+
+### (5) Flexi Permit — explicitly closed as Unresolved
+
+Per explicit instruction this pass: **stop searching for the Flexi Permit
+founding regulation and record it as Unresolved rather than continuing to
+search.** Summary of what was and wasn't found across passes 4–6: the
+Arabic term **"عامل مرن" ("flexible worker")** is confirmed as a real
+LMRA permit category (via Resolution 108/2017, a residency-status
+correction that references but does not found the scheme), but after
+checking three LMRA legal-library categories (Board of Directors
+Resolutions, Resolutions of Other Entities, Cabinet Resolutions Regarding
+LMRA Fees) plus an on-site search attempt, **no founding regulation was
+located**. **Status: Unresolved — do not use in a rule pack until an
+official source is found.** No further search action is planned for this
+item unless explicitly requested again.
+
+---
+
 ## 2b. Verified citations — LLOC gazette-of-record legislation search
 
 All five rows below were confirmed using LLOC's **structured** search
@@ -428,9 +518,9 @@ rule-pack parameter source.**
 | Decree-Law No. (24) of 1976 | Social Insurance Law / private sector | **Fully confirmed** — full 151-article consolidated text retrieved directly from SIO (§2a), not just LLOC metadata (§2b). |
 | Law No. (13) of 1975 | Pensions and retirement benefits, civil servants / public sector | **Confirmed** — direct official Arabic PDF (58 pages) located via SIO's Public Sectors page (§2a). No English translation currently published by SIO. |
 | Law No. (78) of 2006 | Insurance Against Unemployment | **Fully confirmed** — full ~30,400-character consolidated text retrieved directly from SIO (§2a), not just LLOC metadata (§2b). |
-| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Confirmed**, direct full-text download links located (§2a-bis) — English `.docx` and Arabic PDF/HTML confirmed live on LLOC. Files not opened/parsed this session. |
+| Decree-Law No. (21) of 2020 and amendments | Pension/social insurance unification | **Fully confirmed** — full 7-article text parsed (§2a-ter). Merges the Government Employees Retirement Fund (Law 13/1975) and Social Insurance Fund (Decree-Law 24/1976) into one "Retirement and Social Insurance Fund" managed by SIO. |
 | 2023–2024 expatriate EOSB decrees/decisions | SIO-managed non-Bahraini EOSB | **Fully confirmed** — Decision No. (109) of 2023 full text (all 15 articles) retrieved directly from SIO (§2a), including a correction to §2's FAQ-paraphrased calculation formula. Other 2023-2024 decrees/decisions not enumerated this session. |
-| SIO employer directives — monthly wage reporting/contribution shares | — | Not yet located this session; likely reachable via SIO E-Services/employer guides, not yet browsed. |
+| SIO employer directives — monthly wage reporting/contribution shares | — | **Fully confirmed** (§2a-ter, sixth pass) — SIO's own wage-reporting guides located and parsed, including the annual-vs-monthly contribution-scope rule, the 40% salary-increase cap, and the January-as-annual-update rule. |
 
 ### LMRA / labour legislation
 
@@ -438,20 +528,19 @@ rule-pack parameter source.**
 |---|---|---|
 | Law No. (19) of 2006 | Labour Market Regulation / LMRA founding law | **Confirmed** via LLOC (§2b) — exact title match. |
 | Law No. (36) of 2012 | Labour Law for the Private Sector | **Confirmed twice, independently** — LMRA's own WPS obligations page (§3) and LLOC's record for Legislative Decree 16/2021 (§2b) both name it as "the Labour Law for the Private Sector." |
-| Legislative Decree No. (16) of 2021 | Amendment | **Confirmed**, direct full-text download links located (§2a-bis) — LLOC's own UI labels it as an amendment of Law 36/2012. Files not opened/parsed this session. |
+| Legislative Decree No. (16) of 2021 | Amendment | **Fully confirmed** — full 3-article text parsed (§2a-ter). Adds an equal-pay clause to Article 39 of Law 36/2012 and repeals Articles 30–31 (original text of those repealed articles not yet retrieved). |
 | LMRA Board Resolution No. (1) of 2022 | Work permits | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about assigning LMRA administrative tasks to labour registration centres, not work permits. |
 | LMRA Board Resolution No. (2) of 2014 | Domestic workers | **Ticket's description is incorrect** — see §2c. LMRA's own legal library confirms this resolution is about foreign-employer professional-activity permits, not domestic workers. The correct instrument is **Order No. (4) of 2014 "Regulation of Work Permits for Domestic Servants and Equivalent"** — **full 12-article text now retrieved and verified**, see §2c. |
 | Wages Protection Scheme (WPS) — legal basis | Not separately named in ticket, but implied by WPS obligations | **Newly found and confirmed** (§2c, fourth pass): Resolution 68/2019 (founding resolution, full text) and Resolution 22/2021 (phased-rollout schedule, full text), both issued by the Ministry of Labour & Social Development. Previously §3 only had blog/product pages with no underlying legal citation — this closes that gap. |
-| Flexible work permits ("Flexi Permit") / worker mobility / quota-ceiling regulations | — | **Partially located** (§2c, fourth pass): Resolution No. (108) of 2017 confirms "عامل مرن" ("flexible worker") as a real LMRA permit category, but that specific resolution is a residency-status correction, not the scheme's founding regulation, and is Arabic-only/not opened. The scheme's own founding instrument is still not identified — remaining gap, see §5. |
+| Flexible work permits ("Flexi Permit") / worker mobility / quota-ceiling regulations | — | **Unresolved — closed as such by explicit instruction (§2a-ter, sixth pass).** "عامل مرن" ("flexible worker") is confirmed as a real LMRA permit category, but its founding regulation was not located after checking three LMRA legal-library categories. No further search planned; do not use in a rule pack until an official source is found. |
 
 ### Supplementary operational guidance (not legal text)
 
-Not yet retrieved this session: LMRA employer/employee manuals and FAQs,
-visa/work-permit issuance guidance, medical check guidance, employer
-ceiling/quota guidance, the WPS User Manual PDF (referenced by name — "Wage
-Protection System (WPS) User Manual PDF (4 MB)" — on the LMRA obligations
-page in §3, but not opened), and SIO employer contribution-calculation
-guides.
+**Resolved this pass (§2a-ter)**: the WPS User Manual (41 pages, full
+official operational schema) and SIO's employer wage-update guides (both
+full text) are now retrieved and parsed. Still not retrieved: LMRA
+visa/work-permit issuance guidance, medical check guidance, and employer
+ceiling/quota guidance.
 
 ---
 
@@ -484,31 +573,32 @@ guides.
   will need Arabic-text handling (OCR/translation) or a bilingual legal
   reviewer, not just an English paraphrase.
 - **Legislative Decree No. (21) of 2020 and Legislative Decree No. (16) of
-  2021 full text — direct links now located** (§2a-bis, fifth pass): both
-  have confirmed live English `.docx` and Arabic PDF/HTML URLs on LLOC, but
-  the `.docx` files were not opened/parsed in this browser session (they
-  trigger a download rather than an inline render). A future pass with
-  file-download capability, or a pipeline step that fetches and parses
-  `.docx`, would close this the rest of the way.
+  2021 full text — resolved (§2a-ter, sixth pass)**: both fully parsed
+  from the official LLOC `.docx` files (downloaded via `curl` outside the
+  browser tool, then converted from the docx XML). No longer a gap.
 - **Law No. (68) of 2006 (GCC social insurance protection) full text**:
   SIO's own dedicated page for this law exists and confirms the exact
   title, but its content modal explicitly states "This content will be
   published soon" — this is a **site-side publishing gap**, not a missed
   search; worth re-checking periodically rather than searching harder.
-- **"Flexi Permit" / flexible-worker founding regulation not located**:
-  confirmed "عامل مرن" ("flexible worker") is a real LMRA permit category
-  (via a 2017 residency-correction resolution, §2c/§4), and the fifth pass
-  additionally checked LMRA's `Cabinet Resolutions Regarding LMRA Fees`
-  category (`/en/legal/category/3`) without finding it there either — the
-  scheme's own founding regulation remains unidentified after checking
-  three of LMRA's legal-library categories (`Board of Directors
-  Resolutions`, `Resolutions of Other Entities`, `Cabinet Resolutions
-  Regarding LMRA Fees`). LMRA's on-site keyword search (top-right search
-  box) did not return navigable results when tried this pass — may need a
-  different search approach or a direct Official Gazette search on LLOC
-  for "مرن" (Arabic "flexible") as the next concrete step.
-- **SIO employer wage-reporting directives and the WPS User Manual PDF**
-  referenced by name on LMRA's WPS obligations page — still not retrieved.
+- **"Flexi Permit" / flexible-worker founding regulation — closed as
+  Unresolved by explicit instruction (§2a-ter, sixth pass)**: confirmed
+  "عامل مرن" ("flexible worker") is a real LMRA permit category, but its
+  founding regulation was not located after checking three of LMRA's
+  legal-library categories and an on-site search attempt. **This item is
+  deliberately not being searched further** — record as Unresolved and
+  do not use in a rule pack until an official source is found.
+- **SIO employer wage-reporting directives and the WPS User Manual PDF —
+  resolved (§2a-ter, sixth pass)**: both retrieved and parsed in full,
+  including concrete business rules (40% salary-increase cap, the
+  annual-vs-monthly contribution-scope distinction, the January-as-
+  annual-update rule, and the WPS file schema). No longer a gap.
+- **Articles (30) and (31) of Law 36/2012, repealed by Legislative Decree
+  16/2021** (§2a-ter): the repeal is confirmed, but the *original content*
+  of those two articles (what protection or rule they used to contain)
+  was not retrieved — would need a pre-2021 copy of Law 36/2012. New,
+  narrow gap surfaced by this pass; low priority unless a rule pack needs
+  historical/pre-2021 behavior.
 - **The ticket's descriptions for two LMRA Board Resolutions were wrong**,
   not just unverified — see §2c. This is worth flagging distinctly from a
   simple "not found": a wrong citation is more dangerous than a missing one
@@ -556,3 +646,43 @@ the ticket's named legislative instruments now have full-text (not just
 metadata) citations — a materially stronger sourcing base than the first
 two research passes. No payroll calculation logic, parameter defaults, or
 code changes are introduced by this document.
+
+---
+
+## 8. Ready / Not Ready for Rule Engine
+
+This table is the practical answer to "can I build a deterministic
+rule-pack parameter off this citation yet?" — **Ready** means a full
+official text (or an official operational guide with a quoted figure) has
+been retrieved and read; **Not Ready** means only metadata, a partial
+citation, or nothing has been found, and using it would violate the
+architecture handoff's "no LLM-derived statutory numbers" invariant (§6).
+
+| Rule area | Status | Basis |
+|---|---|---|
+| Social Insurance Law general framework (Decree-Law 24/1976) | ✅ **Ready** | Full 151-article text (§2a) |
+| Unemployment insurance (Law 78/2006) | ✅ **Ready** | Full text (§2a) |
+| Non-Bahraini EOSB — contribution rates (4.2% / 8.4%) | ✅ **Ready** | Confirmed verbatim in Decision 109/2023 Article 5 (§2a) |
+| Non-Bahraini EOSB — calculation formula | ⚠️ **Ready with a caveat** | Statutory text says "half a month's wages" (Decision 109/2023 Art. 9, §2a), not the FAQ's "15 days" (§2). **Resolve the half-month-vs-15-days computation method with a bilingual legal reviewer or Bahraini payroll practitioner before hardcoding** — this is the single most important open question blocking EOSB rule-pack implementation. |
+| EOSB/contribution calculation scope (which salary components count, annual vs. monthly) | ✅ **Ready** | SIO's own wage-update guides, quoted rules (§2a-ter) |
+| Public-sector pensions (Law 13/1975) | ⚠️ **Ready, Arabic-only** | Full official PDF (§2a), no English translation published by SIO — needs translation/bilingual review before use in an English-language rule engine |
+| Pension-fund unification (Legislative Decree 21/2020) | ✅ **Ready** | Full 7-article text (§2a-ter) |
+| Equal-pay / Labour Law amendment (Legislative Decree 16/2021) | ✅ **Ready** | Full 3-article text (§2a-ter); note Articles 30–31's original (pre-repeal) content is not retrieved, only the fact of repeal |
+| LMRA founding law (Law 19/2006) | ✅ **Ready** | Full official PDF (§2c) |
+| Private-sector Labour Law (Law 36/2012) | ✅ **Ready** | Full official PDF, with explicit Arabic-primacy statement (§2c) |
+| Domestic-worker work permits (Order 4/2014) | ✅ **Ready** | Full 12-article text (§2c) |
+| WPS legal basis and phased rollout (Resolutions 68/2019, 22/2021) | ✅ **Ready** | Full text of both (§2c) |
+| WPS 2.0 operational schema (salary file format, roles, deadlines) | ✅ **Ready** | Full 41-page official User Manual (§2a-ter) — operational spec, not statute; legal basis is Resolution 68/2019 above |
+| LMRA general administrative fee schedule | ✅ **Ready** | Full text, Resolution 1/2017 (§2a-bis) |
+| GCC social insurance protection (Law 68/2006) | ❌ **Not Ready** | Title/existence confirmed only; SIO has not published the text ("will be published soon") |
+| Flexi Permit / flexible-worker regulation | ❌ **Not Ready — Unresolved** | No founding regulation located after three LMRA categories checked; do not use in a rule pack |
+| Pre-2021 content of Law 36/2012 Articles 30–31 | ❌ **Not Ready** | Repealed by Decree 16/2021; original text not retrieved |
+| SIO 2023–2024 EOSB decrees/decisions beyond Decision 109/2023 | ❌ **Not Ready** | Not enumerated beyond the one instrument already confirmed |
+
+**Bottom line for whoever picks up rule-pack implementation next**: the
+core EOSB and WPS logic is sourced well enough to start building against,
+**except** the half-month-vs-15-days computation method for non-Bahraini
+EOSB, which needs a human legal/payroll call before it becomes a hard
+constant — everything else marked ❌ is either genuinely low-priority
+(Flexi Permit, historical article text) or blocked on the government
+publishing the source (Law 68/2006), not on further searching.
