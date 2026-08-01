@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from uuid import uuid4
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -115,7 +116,7 @@ class SuggestionStatus(str, Enum):
     DISMISSED = "dismissed"
 
 
-_DECIDED_STATUSES = {SuggestionStatus.APPROVED, SuggestionStatus.REJECTED}
+_DECIDED_STATUSES = {SuggestionStatus.APPROVED, SuggestionStatus.REJECTED, SuggestionStatus.DISMISSED}
 
 
 class Suggestion(BaseModel):
@@ -124,6 +125,7 @@ class Suggestion(BaseModel):
     review workflow, and that transition must record who decided and
     when."""
 
+    suggestion_id: str = Field(default_factory=lambda: uuid4().hex, min_length=1)
     tenant_id: str = Field(min_length=1)
     category: str = Field(min_length=1)
     reasoning: str = Field(min_length=1)
@@ -135,6 +137,7 @@ class Suggestion(BaseModel):
 
     @model_validator(mode="after")
     def _validated(self) -> "Suggestion":
+        object.__setattr__(self, "suggestion_id", _clean(self.suggestion_id))
         object.__setattr__(self, "tenant_id", _clean(self.tenant_id))
         object.__setattr__(self, "category", _clean(self.category))
         object.__setattr__(self, "reasoning", _clean(self.reasoning))

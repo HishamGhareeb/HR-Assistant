@@ -3,11 +3,11 @@ before it's sent to the user. This is a last line of defense, not the
 primary control -- OpenFGA filtering is what actually enforces access."""
 from __future__ import annotations
 
-from llm_guard.output_scanners import Sensitive
-
 
 class OutputScanner:
     def __init__(self) -> None:
+        from llm_guard.output_scanners import Sensitive
+
         self._scanner = Sensitive(redact=False)
 
     def scan(self, prompt: str, output: str) -> tuple[str, bool]:

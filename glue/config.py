@@ -49,3 +49,9 @@ class Config:
         # see docs/AUDIT_AND_OBSERVABILITY.md.
         self.audit_privacy_key = _required("AUDIT_PRIVACY_KEY").encode("utf-8")
         self.audit_log_path = os.environ.get("AUDIT_LOG_PATH", ".tmp/audit.jsonl")
+
+        # Suggestion review inbox. Reviewer mapping is tenant-scoped JSON:
+        # {"tenant_id": ["user_id", ...]}. Missing mapping means no one is
+        # authorized until deployment provisions explicit reviewers.
+        self.suggestion_store_path = os.environ.get("SUGGESTION_STORE_PATH", ".tmp/suggestions.jsonl")
+        self.hr_reviewers_json = os.environ.get("HR_REVIEWERS_JSON", "{}")

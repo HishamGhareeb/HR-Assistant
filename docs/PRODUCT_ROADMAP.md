@@ -30,6 +30,7 @@ making autonomous changes.
 
 - Multi-tenant isolation and customer administration
 - Subscription plans, usage metering, billing, and limits
+- Bahrain-first payroll support with modular, versioned country-law rule packs
 - Branding, onboarding, legal pages, DPA, retention, and deletion workflows
 - WhatsApp integration and configurable notifications
 - Monitoring, backups, disaster recovery, SLOs, and support runbooks
@@ -48,3 +49,17 @@ making autonomous changes.
 4. Build synthetic Frappe ingestion and authorization tuple sync.
 5. Add real authentication and strict tenant isolation.
 6. Build the smallest end-to-end employee chat and HR review workflow.
+
+## Payroll and country-law direction
+
+Payroll must be designed as a deterministic, jurisdiction-aware capability. Bahrain
+is the first required market, but the product should not hard-code Bahrain logic
+into the general request path. Country-specific labor and payroll rules should live
+in modular, versioned rule packs with effective dates, source/reference metadata,
+tests, and audit-safe explanations. Future country changes should be handled by
+adding or updating a country-law rule version with minimal changes to core API or
+chat code.
+
+LLMs may explain payroll outputs and cite approved sources, but payroll
+calculations and legal-rule evaluation must come from deterministic rules rather
+than model guesses.

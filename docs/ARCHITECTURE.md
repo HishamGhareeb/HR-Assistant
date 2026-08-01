@@ -24,7 +24,7 @@ Every stage ------------------------------------------------> Langfuse
 ```
 
 Frappe HR remains the intended system of record. Suggestions are review items; they
-never mutate Frappe data.
+are persisted to the HR review inbox and never mutate Frappe data.
 
 ## Trust boundaries
 
@@ -37,7 +37,9 @@ never mutate Frappe data.
    user identifier; it contains only operational counts/status and, on success,
    the scanner-sanitized answer and suggestions. With incomplete Langfuse
    credentials, tracing is a local no-op.
-5. Suggestions require a human decision and a separate, audited workflow.
+5. Suggestions require a human decision in the review inbox. Approval records
+   the reviewer decision and immutable decision history; it does not apply the
+   suggestion to Frappe or any HR source system.
 
 ## Gaps before production
 
@@ -47,6 +49,5 @@ never mutate Frappe data.
 - Replace per-document authorization checks with a bounded or batched approach.
 - Add timeouts, retries, circuit breakers, structured errors, and request IDs.
 - Add persistent audit events and retention controls independent of model tracing.
-- Add a review inbox for suggestions and explicit approval/rejection history.
 - Add an admin UI, employee chat UI, WhatsApp adapter, deployment manifests,
   observability, backup/restore, security tests, and customer onboarding.
