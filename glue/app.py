@@ -49,6 +49,19 @@ from .bahrain_payroll_api import (
 from .claude_client import ClaudeClient
 from .config import Config
 from .domain import Identity, Suggestion, SuggestionStatus
+from .feedback import (
+    AnswerFeedback,
+    FeedbackAuthorizationError,
+    FeedbackNotFoundError,
+    FeedbackReasonCode,
+    FeedbackStore,
+    FeedbackTransitionError,
+    HrFeedbackAuthorizer,
+    JsonlFeedbackStore,
+    QualityAnalyticsSummary,
+    StaticHrFeedbackAuthorizer,
+    UnansweredQuestion,
+)
 from .frappe_sync import FrappeRecord, SyncEngine
 from .llm_guard_scan import OutputScanner
 from .observability import Metrics
@@ -92,6 +105,113 @@ class QuestionResponse(BaseModel):
     answer: str
     suggestions: list[SuggestionResponse]
     blocked: bool
+    request_id: str
+
+
+class SubmitFeedbackRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=4_000)
+    answer: str = Field(min_length=1, max_length=8_000)
+    helpful: bool
+    reason_code: FeedbackReasonCode | None = None
+    note: str | None = Field(default=None, max_length=2_000)
+
+
+class FeedbackResolutionResponse(BaseModel):
+    resolved_by: str
+    resolved_at: str
+    note: str | None
+
+
+class FeedbackResponse(BaseModel):
+    feedback_id: str
+    tenant_id: str
+    user_id: str
+    request_id: str
+    question: str
+    answer: str
+    helpful: bool
+    reason_code: FeedbackReasonCode | None
+    note: str | None
+    escalated: bool
+    resolved: bool
+    resolution: FeedbackResolutionResponse | None
+    created_at: str
+
+    @classmethod
+    def from_domain(cls, feedback: AnswerFeedback) -> "FeedbackResponse":
+        return cls(
+            feedback_id=feedback.feedback_id,
+            tenant_id=feedback.tenant_id,
+            user_id=feedback.user_id,
+            request_id=feedback.request_id,
+            question=feedback.question,
+            answer=feedback.answer,
+            helpful=feedback.helpful,
+            reason_code=feedback.reason_code,
+            note=feedback.note,
+            escalated=feedback.escalated,
+            resolved=feedback.resolved,
+            resolution=(
+                FeedbackResolutionResponse(
+                    resolved_by=feedback.resolution.resolved_by,
+                    resolved_at=feedback.resolution.resolved_at.isoformat(),
+                    note=feedback.resolution.note,
+                )
+                if feedback.resolution is not None
+                else None
+            ),
+            created_at=feedback.created_at.isoformat(),
+        )
+
+
+class UnansweredQuestionResponse(BaseModel):
+    record_id: str
+    tenant_id: str
+    user_id: str
+    request_id: str
+    question: str
+    model_outcome: str
+    created_at: str
+
+    @classmethod
+    def from_domain(cls, entry: UnansweredQuestion) -> "UnansweredQuestionResponse":
+        return cls(
+            record_id=entry.record_id,
+            tenant_id=entry.tenant_id,
+            user_id=entry.user_id,
+            request_id=entry.request_id,
+            question=entry.question,
+            model_outcome=entry.model_outcome,
+            created_at=entry.created_at.isoformat(),
+        )
+
+
+class ResolveFeedbackRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=2_000)
+
+
+class QualitySummaryResponse(BaseModel):
+    tenant_id: str
+    total_feedback: int
+    helpful_count: int
+    not_helpful_count: int
+    helpful_rate: float | None
+    reason_code_counts: dict[str, int]
+    unresolved_escalation_count: int
+    unanswered_count: int
+
+    @classmethod
+    def from_domain(cls, summary: QualityAnalyticsSummary) -> "QualitySummaryResponse":
+        return cls(
+            tenant_id=summary.tenant_id,
+            total_feedback=summary.total_feedback,
+            helpful_count=summary.helpful_count,
+            not_helpful_count=summary.not_helpful_count,
+            helpful_rate=summary.helpful_rate,
+            reason_code_counts=summary.reason_code_counts,
+            unresolved_escalation_count=summary.unresolved_escalation_count,
+            unanswered_count=summary.unanswered_count,
+        )
 
 
 class ReviewDecisionRequest(BaseModel):
@@ -246,7 +366,11 @@ class AdminRoleAssignmentResponse(BaseModel):
         )
 
 
-def build_pipeline(config: Config, suggestion_store: SuggestionStore | None = None) -> Pipeline:
+def build_pipeline(
+    config: Config,
+    suggestion_store: SuggestionStore | None = None,
+    feedback_store: FeedbackStore | None = None,
+) -> Pipeline:
     return Pipeline(
         onyx=OnyxClient(config.onyx_api_url, config.onyx_api_key),
         openfga=OpenFgaFilter(
@@ -267,6 +391,7 @@ def build_pipeline(config: Config, suggestion_store: SuggestionStore | None = No
         ),
         metrics=Metrics(),
         suggestion_store=suggestion_store,
+        feedback_store=feedback_store,
     )
 
 
@@ -304,6 +429,16 @@ def build_admin_authorizer(config: Config) -> HrAdminAuthorizer:
     return StaticHrAdminAuthorizer(admins)
 
 
+def build_feedback_authorizer(config: Config) -> HrFeedbackAuthorizer:
+    try:
+        reviewers = json.loads(config.hr_feedback_reviewers_json)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"HR_FEEDBACK_REVIEWERS_JSON is not valid JSON: {exc}") from exc
+    if not isinstance(reviewers, dict):
+        raise RuntimeError("HR_FEEDBACK_REVIEWERS_JSON must be a JSON object keyed by tenant_id")
+    return StaticHrFeedbackAuthorizer(reviewers)
+
+
 def create_app(
     pipeline: Pipeline | None = None,
     verifier: TokenVerifier | None = None,
@@ -313,6 +448,8 @@ def create_app(
     admin_authorizer: HrAdminAuthorizer | None = None,
     sync_engine: SyncEngine | None = None,
     tenant_role_syncer: TenantRoleSyncer | None = None,
+    feedback_store: FeedbackStore | None = None,
+    feedback_authorizer: HrFeedbackAuthorizer | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -327,6 +464,8 @@ def create_app(
         app.state.admin_authorizer = admin_authorizer
         app.state.sync_engine = sync_engine
         app.state.tenant_role_syncer = tenant_role_syncer
+        app.state.feedback_store = feedback_store
+        app.state.feedback_authorizer = feedback_authorizer
         yield
 
     app = FastAPI(
@@ -354,7 +493,11 @@ def create_app(
             return active_pipeline
         try:
             config = Config()
-            active_pipeline = build_pipeline(config, suggestion_store=_get_or_build_suggestion_store(request, config))
+            active_pipeline = build_pipeline(
+                config,
+                suggestion_store=_get_or_build_suggestion_store(request, config),
+                feedback_store=_get_or_build_feedback_store(request, config),
+            )
         except RuntimeError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -370,6 +513,40 @@ def create_app(
         active_store = JsonlSuggestionStore(Path(config.suggestion_store_path))
         request.app.state.suggestion_store = active_store
         return active_store
+
+    def _get_or_build_feedback_store(request: Request, config: Config) -> FeedbackStore:
+        active_store = request.app.state.feedback_store
+        if active_store is not None:
+            return active_store
+        active_store = JsonlFeedbackStore(Path(config.feedback_store_path))
+        request.app.state.feedback_store = active_store
+        return active_store
+
+    def get_feedback_store(request: Request) -> FeedbackStore:
+        active_store = request.app.state.feedback_store
+        if active_store is not None:
+            return active_store
+        try:
+            return _get_or_build_feedback_store(request, Config())
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"HR Assistant is not configured: {exc}",
+            ) from exc
+
+    def get_feedback_authorizer(request: Request) -> HrFeedbackAuthorizer:
+        active_authorizer = request.app.state.feedback_authorizer
+        if active_authorizer is not None:
+            return active_authorizer
+        try:
+            active_authorizer = build_feedback_authorizer(Config())
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"HR Assistant is not configured: {exc}",
+            ) from exc
+        request.app.state.feedback_authorizer = active_authorizer
+        return active_authorizer
 
     def get_suggestion_store(request: Request) -> SuggestionStore:
         active_store = request.app.state.suggestion_store
@@ -468,6 +645,12 @@ def create_app(
         except AdminAuthorizationError as exc:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for HR admin controls") from exc
 
+    def authorize_hr_feedback(identity: Identity, authorizer: HrFeedbackAuthorizer) -> None:
+        try:
+            authorizer.authorize(identity)
+        except FeedbackAuthorizationError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to review answer feedback") from exc
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -488,7 +671,88 @@ def create_app(
             answer=result.answer,
             suggestions=[SuggestionResponse.from_domain(s) for s in result.suggestions],
             blocked=result.blocked,
+            request_id=result.request_id,
         )
+
+    @app.post("/v1/questions/{request_id}/feedback", response_model=FeedbackResponse)
+    async def submit_answer_feedback(
+        request_id: str,
+        body: SubmitFeedbackRequest,
+        identity: Identity = Depends(get_identity),
+        store: FeedbackStore = Depends(get_feedback_store),
+    ) -> FeedbackResponse:
+        # Self-service: the employee who asked rates their own answer.
+        # request_id correlates back to QuestionResponse.request_id --
+        # not a separately-authorized surface like the HR list/resolve
+        # endpoints below.
+        try:
+            feedback = AnswerFeedback.submit(
+                identity=identity,
+                request_id=request_id,
+                question=body.question,
+                answer=body.answer,
+                helpful=body.helpful,
+                reason_code=body.reason_code,
+                note=body.note,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+        stored = store.record_feedback(feedback)
+        return FeedbackResponse.from_domain(stored)
+
+    @app.get("/v1/hr/feedback", response_model=list[FeedbackResponse])
+    async def list_answer_feedback(
+        helpful: bool | None = None,
+        escalated_only: bool = False,
+        identity: Identity = Depends(get_identity),
+        store: FeedbackStore = Depends(get_feedback_store),
+        authorizer: HrFeedbackAuthorizer = Depends(get_feedback_authorizer),
+    ) -> list[FeedbackResponse]:
+        authorize_hr_feedback(identity, authorizer)
+        return [
+            FeedbackResponse.from_domain(record)
+            for record in store.list_feedback(
+                tenant_id=identity.tenant_id, helpful=helpful, escalated_only=escalated_only
+            )
+        ]
+
+    @app.get("/v1/hr/feedback/unanswered", response_model=list[UnansweredQuestionResponse])
+    async def list_unanswered_questions(
+        identity: Identity = Depends(get_identity),
+        store: FeedbackStore = Depends(get_feedback_store),
+        authorizer: HrFeedbackAuthorizer = Depends(get_feedback_authorizer),
+    ) -> list[UnansweredQuestionResponse]:
+        authorize_hr_feedback(identity, authorizer)
+        return [
+            UnansweredQuestionResponse.from_domain(entry)
+            for entry in store.list_unanswered(tenant_id=identity.tenant_id)
+        ]
+
+    @app.get("/v1/hr/feedback/quality-summary", response_model=QualitySummaryResponse)
+    async def get_quality_summary(
+        identity: Identity = Depends(get_identity),
+        store: FeedbackStore = Depends(get_feedback_store),
+        authorizer: HrFeedbackAuthorizer = Depends(get_feedback_authorizer),
+    ) -> QualitySummaryResponse:
+        authorize_hr_feedback(identity, authorizer)
+        return QualitySummaryResponse.from_domain(store.quality_summary(tenant_id=identity.tenant_id))
+
+    @app.post("/v1/hr/feedback/{feedback_id}/resolve", response_model=FeedbackResponse)
+    async def resolve_answer_feedback(
+        feedback_id: str,
+        body: ResolveFeedbackRequest,
+        identity: Identity = Depends(get_identity),
+        store: FeedbackStore = Depends(get_feedback_store),
+        authorizer: HrFeedbackAuthorizer = Depends(get_feedback_authorizer),
+    ) -> FeedbackResponse:
+        authorize_hr_feedback(identity, authorizer)
+        try:
+            resolved = store.resolve(identity=identity, feedback_id=feedback_id, note=body.note)
+        except FeedbackNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feedback not found") from exc
+        except FeedbackTransitionError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        return FeedbackResponse.from_domain(resolved)
 
     @app.get("/v1/hr/suggestions", response_model=list[ReviewSuggestionResponse])
     async def list_suggestions(

@@ -63,7 +63,9 @@ class FakePipeline:
         self.metrics = Metrics(CollectorRegistry())
 
     async def handle_question(self, identity, question) -> PipelineResult:
-        return PipelineResult(answer="", suggestions=[], blocked=False)
+        return PipelineResult(
+            answer="", suggestions=[], blocked=False, request_id="test-request-id", model_outcome="answered"
+        )
 
 
 def build_client(admins=None) -> TestClient:

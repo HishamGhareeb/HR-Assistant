@@ -56,3 +56,10 @@ class Config:
         self.suggestion_store_path = os.environ.get("SUGGESTION_STORE_PATH", ".tmp/suggestions.jsonl")
         self.hr_reviewers_json = os.environ.get("HR_REVIEWERS_JSON", "{}")
         self.hr_admins_json = os.environ.get("HR_ADMINS_JSON", "{}")
+
+        # Answer feedback / unanswered-question / quality-analytics store
+        # (HIS-23). Reviewer mapping follows the same tenant-scoped JSON
+        # shape as HR_REVIEWERS_JSON, kept as its own variable so the
+        # feedback surface can be granted to a different reviewer set.
+        self.feedback_store_path = os.environ.get("FEEDBACK_STORE_PATH", ".tmp/feedback.jsonl")
+        self.hr_feedback_reviewers_json = os.environ.get("HR_FEEDBACK_REVIEWERS_JSON", "{}")

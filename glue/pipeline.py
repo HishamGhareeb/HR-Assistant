@@ -50,6 +50,7 @@ from .audit import AuditLogger
 from .claude_client import ClaudeClient
 from .context_budget import fit_to_budget
 from .domain import DocumentClassification, Identity, Suggestion
+from .feedback import FeedbackStore, UnansweredQuestion
 from .llm_guard_scan import OutputScanner
 from .model_response import ModelResponseValidationError, validate_model_response
 from .observability import Metrics, safe_call
@@ -84,6 +85,8 @@ class PipelineResult:
     answer: str
     suggestions: list[Suggestion]
     blocked: bool
+    request_id: str
+    model_outcome: str
 
 
 class Pipeline:
@@ -104,6 +107,7 @@ class Pipeline:
         context_max_tokens: int = DEFAULT_CONTEXT_MAX_TOKENS,
         retry_policy: RetryPolicy | None = None,
         suggestion_store: SuggestionStore | None = None,
+        feedback_store: FeedbackStore | None = None,
     ) -> None:
         self._onyx = onyx
         self._openfga = openfga
@@ -119,6 +123,7 @@ class Pipeline:
         self._context_max_tokens = context_max_tokens
         self._retry_policy = retry_policy or RetryPolicy()
         self._suggestion_store = suggestion_store
+        self._feedback_store = feedback_store
         # One breaker per dependency, held for the process lifetime (not
         # per-request) -- that's what lets sustained failure trip it.
         self._onyx_circuit = CircuitBreaker(name="onyx")
@@ -160,7 +165,7 @@ class Pipeline:
                         ),
                         component="langfuse",
                     )
-                return PipelineResult(answer=answer, suggestions=[], blocked=False)
+                return PipelineResult(answer=answer, suggestions=[], blocked=False, request_id=request_id, model_outcome=model_outcome)
 
             candidates = await self._retrieve(question, identity.tenant_id, allowed_classifications)
             retrieval_count = len(candidates)
@@ -189,7 +194,7 @@ class Pipeline:
                         ),
                         component="langfuse",
                     )
-                return PipelineResult(answer=answer, suggestions=[], blocked=False)
+                return PipelineResult(answer=answer, suggestions=[], blocked=False, request_id=request_id, model_outcome=model_outcome)
 
             budget = fit_to_budget([doc.chunk for doc in authorized], max_tokens=self._context_max_tokens)
 
@@ -212,7 +217,7 @@ class Pipeline:
                         lambda: trace.span(name="result", output={"answer": answer, "blocked": True}),
                         component="langfuse",
                     )
-                return PipelineResult(answer=answer, suggestions=[], blocked=True)
+                return PipelineResult(answer=answer, suggestions=[], blocked=True, request_id=request_id, model_outcome=model_outcome)
 
             # Validate the scanner's sanitized value, never Claude's raw
             # output -- a scanner that redacts still has to produce
@@ -231,7 +236,7 @@ class Pipeline:
                         lambda: trace.span(name="result", output={"answer": answer, "blocked": True}),
                         component="langfuse",
                     )
-                return PipelineResult(answer=answer, suggestions=[], blocked=True)
+                return PipelineResult(answer=answer, suggestions=[], blocked=True, request_id=request_id, model_outcome=model_outcome)
 
             suggestions = [
                 Suggestion(
@@ -271,7 +276,7 @@ class Pipeline:
                     ),
                     component="langfuse",
                 )
-            return PipelineResult(answer=answer, suggestions=suggestions, blocked=False)
+            return PipelineResult(answer=answer, suggestions=suggestions, blocked=False, request_id=request_id, model_outcome=model_outcome)
 
         except asyncio.CancelledError:
             error_class = "CancelledError"
@@ -283,12 +288,12 @@ class Pipeline:
             logger.warning(
                 "pipeline_stage_failed request_id=%s error_class=%s detail=%s", request_id, error_class, exc.detail
             )
-            return PipelineResult(answer=answer, suggestions=[], blocked=False)
+            return PipelineResult(answer=answer, suggestions=[], blocked=False, request_id=request_id, model_outcome=model_outcome)
         except Exception as exc:  # noqa: BLE001 -- top-level safety net, must never leak internals to a client
             model_outcome = "error"
             error_class = type(exc).__name__
             logger.exception("pipeline_unexpected_failure request_id=%s", request_id)
-            return PipelineResult(answer=SERVICE_UNAVAILABLE_RESPONSE, suggestions=[], blocked=False)
+            return PipelineResult(answer=SERVICE_UNAVAILABLE_RESPONSE, suggestions=[], blocked=False, request_id=request_id, model_outcome=model_outcome)
         finally:
             self._audit_logger.record(
                 request_id=request_id,
@@ -309,6 +314,20 @@ class Pipeline:
                 scanner_blocked=scanner_outcome == "blocked",
                 error_class=error_class,
             )
+            # No employee action required to surface an uncovered topic to
+            # HR -- every non-"answered" outcome is logged here, once, in
+            # the same finally block as the audit/metrics calls above.
+            if self._feedback_store is not None and model_outcome != "answered":
+                self._feedback_store.record_unanswered(
+                    UnansweredQuestion(
+                        tenant_id=identity.tenant_id,
+                        user_id=identity.user_id,
+                        request_id=request_id,
+                        question=question,
+                        model_outcome=model_outcome,
+                        created_at=datetime.now(timezone.utc),
+                    )
+                )
 
     async def _allowed_classifications(self, identity: Identity) -> tuple[DocumentClassification, ...]:
         try:
