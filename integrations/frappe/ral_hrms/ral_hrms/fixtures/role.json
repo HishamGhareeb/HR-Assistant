@@ -1,0 +1,52 @@
+[
+  {
+    "doctype": "Role",
+    "name": "RAL Tenant Admin",
+    "role_name": "RAL Tenant Admin",
+    "desk_access": 1,
+    "disabled": 0,
+    "is_custom": 1,
+    "two_factor_auth": 0,
+    "description": "Customer-side tenant administrator who manages tenant settings and user provisioning."
+  },
+  {
+    "doctype": "Role",
+    "name": "RAL HR Admin",
+    "role_name": "RAL HR Admin",
+    "desk_access": 1,
+    "disabled": 0,
+    "is_custom": 1,
+    "two_factor_auth": 0,
+    "description": "Customer HR administrator with access to HR-only records, review inboxes, and compliance workflows."
+  },
+  {
+    "doctype": "Role",
+    "name": "RAL Payroll Officer",
+    "role_name": "RAL Payroll Officer",
+    "desk_access": 1,
+    "disabled": 0,
+    "is_custom": 1,
+    "two_factor_auth": 0,
+    "description": "Customer payroll operator for deterministic payroll runs, WPS exports, and payroll traces."
+  },
+  {
+    "doctype": "Role",
+    "name": "RAL Manager",
+    "role_name": "RAL Manager",
+    "desk_access": 1,
+    "disabled": 0,
+    "is_custom": 1,
+    "two_factor_auth": 0,
+    "description": "People manager with team-scoped approvals, manager-only documents, and limited risk signals."
+  },
+  {
+    "doctype": "Role",
+    "name": "RAL Employee",
+    "role_name": "RAL Employee",
+    "desk_access": 1,
+    "disabled": 0,
+    "is_custom": 1,
+    "two_factor_auth": 0,
+    "description": "Employee self-service user with tenant-public/internal access only."
+  }
+]
