@@ -24,11 +24,19 @@ from enum import Enum
 from glue.bahrain_payroll.statutory_values import (
     EOSB_EMPLOYER_PENALTY_MAX_MULTIPLIER,
     EOSB_EMPLOYER_PENALTY_MIN_MULTIPLIER,
+    EOSB_EFFECTIVE_DATE,
     EOSB_FIRST_THREE_YEARS_CONTRIBUTION_RATE_PERCENT,
     EOSB_FIRST_TIER_YEARS,
     EOSB_HALF_MONTH_DIVISOR,
     EOSB_SUBSEQUENT_TIER_MONTHS_PER_YEAR,
     EOSB_SUBSEQUENT_YEARS_CONTRIBUTION_RATE_PERCENT,
+)
+from glue.bahrain_payroll.rate_registry import (
+    BAHRAIN_PAYROLL_RATE_REGISTRY,
+    BahrainContributionBranch,
+    BahrainContributionPayer,
+    BahrainPayrollRateLookup,
+    BahrainWorkerCategory,
 )
 
 
@@ -99,11 +107,18 @@ def evaluate_eosb_eligibility(
 
 def eosb_monthly_contribution_rate_percent(
     completed_service_years: Decimal,
+    as_of: date | None = None,
 ) -> Decimal:
-    first_tier_years = Decimal(str(EOSB_FIRST_TIER_YEARS.value))
-    if completed_service_years < first_tier_years:
-        return Decimal(str(EOSB_FIRST_THREE_YEARS_CONTRIBUTION_RATE_PERCENT.value))
-    return Decimal(str(EOSB_SUBSEQUENT_YEARS_CONTRIBUTION_RATE_PERCENT.value))
+    rate = BAHRAIN_PAYROLL_RATE_REGISTRY.lookup(
+        BahrainPayrollRateLookup(
+            worker_category=BahrainWorkerCategory.NON_BAHRAINI_PRIVATE,
+            branch=BahrainContributionBranch.EXPATRIATE_EOSB,
+            payer=BahrainContributionPayer.EMPLOYER,
+            as_of=as_of or eosb_effective_date(),
+            completed_service_years=completed_service_years,
+        )
+    )
+    return Decimal(str(rate.percent.value))
 
 
 def eosb_monthly_employer_contribution(
@@ -164,7 +179,7 @@ def employer_non_payment_penalty_range(
 
 
 def eosb_effective_date() -> date:
-    return date.fromisoformat("2024-03-01")
+    return date.fromisoformat(str(EOSB_EFFECTIVE_DATE.value))
 
 
 def _money(value: Decimal) -> Decimal:
