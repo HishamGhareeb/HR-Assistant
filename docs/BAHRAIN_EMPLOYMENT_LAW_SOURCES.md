@@ -46,7 +46,7 @@ silently omitted.
 | **Source** | https://www.lmra.gov.bh/files/cms/shared/file/labour%20law.pdf (same URL already recorded in `BAHRAIN_PAYROLL_SOURCES.md` §2c, but that pass only quoted the preamble; this pass reads the substantive articles) |
 | **Language / authority statement** | English (LMRA's own translation). The PDF carries LMRA's own footnote: **"This is unofficial translation, in case of difference between the Arabic and the English text, the Arabic text shall prevail."** — same Arabic-primacy statement already recorded in the payroll doc. |
 | **Retrieved** | 2026-08-02 |
-| **⚠ Version-currency concern (see §4)** | This PDF's content for Articles 30, 31, and 39 does **not** reflect the amendments made by Legislative Decree No. (16) of 2021 (confirmed full-text in `BAHRAIN_PAYROLL_SOURCES.md` §2a-ter), even though the LMRA page shows a "Last Update: 14-10-2025" date. Flagged, not resolved — see §4. |
+| **⚠ Version-currency concern (see §4) — investigated and explained** | This PDF's content for Articles 30, 31, and 39 does **not** reflect the amendments made by Legislative Decree No. (16) of 2021 (confirmed full-text in `BAHRAIN_PAYROLL_SOURCES.md` §2a-ter). Follow-up research (§4) confirmed this is because **neither LMRA nor LLOC publishes a legally consolidated English text** — both host the original 2012 translation unmerged with later amendments. As a matter of current law, the amendment is real and in force; the English source documents just don't show it. |
 
 ---
 
@@ -88,13 +88,17 @@ silently omitted.
 
 ---
 
-## 4. ⚠ Flagged contradiction — Articles 30–31 and Article 39 do not reflect Decree 16/2021
+## 4. Investigated further — resolved explanation for the Articles 30–31 / Article 39 discrepancy
 
-**Do not silently resolve this — flagging per explicit instruction.**
+**Status: explained and evidenced, but the practical guidance below still
+matters — this is not a "the PDF is simply wrong" story, it changes how
+any future English-language Bahrain rule pack must be built.**
+
+### The original observation
 
 `BAHRAIN_PAYROLL_SOURCES.md` §2a-ter (sixth research pass, HIS-50) retrieved
-the **full official text of Legislative Decree No. (16) of 2021** directly
-from LLOC, which states:
+the full official text of **Legislative Decree No. (16) of 2021** from
+LLOC, which unambiguously states:
 
 > Article One: A second paragraph is added to Article (39) of the Labour
 > Law... "discrimination in wages between male and female workers in work
@@ -102,35 +106,77 @@ from LLOC, which states:
 > Article Two: Articles (30) and (31) of the Labour Law... shall be
 > repealed.
 
-This pass's read of the **current LMRA-hosted "consolidated" PDF**
-(`labour law.pdf`, page metadata "Last Update: 14-10-2025") shows:
+Pass 1 of this document found the LMRA-hosted "full text" of Law 36/2012
+still shows the pre-2021 versions of Articles 30, 31, and 39 — despite an
+LMRA page date of "Last Update: 14-10-2025."
 
-- **Article 39** with only its *original* single paragraph ("It shall be
-  prohibited to discriminate in the payment of wages on the basis of sex,
-  ethnic origin, language, religion or belief.") — **no second paragraph
-  about "work of equal value" is present.**
-- **Articles 30 and 31** present with substantive content (Ministerial
-  resolutions on night-work restrictions and prohibited occupations for
-  women respectively) — **not repealed/removed/blank as Decree 16/2021
-  states they should be.**
+### Follow-up research (this pass)
 
-**Possible explanations, none confirmed**:
-1. The LMRA PDF is a stale consolidation that has not been updated to
-   reflect the 2021 amendment, despite its displayed "Last Update" date
-   (which may refer to page/metadata update, not legal-text currency).
-2. The Articles 30/31 repealed in 2021 were later re-populated by a
-   subsequent, not-yet-located amendment (legislatively unusual but not
-   impossible — article numbers can be reused).
-3. Some other reconciliation exists between the two texts that neither
-   document explains.
+Three things were checked directly against LLOC — the gazette-of-record
+commission itself, not LMRA's copy — to rule out the possible explanations
+listed in the prior version of this section:
 
-**Recommendation**: do not treat the LMRA PDF as automatically
-amendment-current. Before encoding **any** Article 39-adjacent
-(wage-discrimination) or Article 30/31-adjacent (women's night-work /
-occupation-restriction) rule, a human should cross-check the actual
-Official Gazette Arabic text via LLOC directly (not LMRA's translation) for
-the current, amendment-integrated wording. **Flagged for human legal
-review — not resolved by this document.**
+1. **LLOC's own standalone text of Law 36/2012** (identifier `K3612`,
+   https://www.lloc.gov.bh/FullEn/K3612.docx, downloaded and parsed
+   directly): **shows the same pre-2021 content** for Articles 30, 31, and
+   39 as LMRA's copy. This rules out "LMRA specifically is stale" — LLOC's
+   own text has the identical gap. Critically, this document's own header
+   reads **"Published on the website on May 2024"** — nearly three years
+   *after* Decree 16/2021 (August 2021) — and still doesn't reflect it.
+2. **LLOC's official amendments list for Law 36/2012**
+   (https://www.lloc.gov.bh/En/Legislation/Amendments/K3612): shows
+   **exactly 4 amendments** — Law 31/2014, Law 37/2015, Legislative Decree
+   59/2018, and Legislative Decree 16/2021 (the most recent, 5 August
+   2021). **No 5th amendment exists** that could have re-added Articles
+   30/31 or reversed the 2021 changes. This rules out explanation #2 from
+   the prior version of this section (a later restoring amendment).
+3. **Legislative Decree 16/2021's own text was re-downloaded and re-read
+   byte-for-byte** directly from LLOC (not relying on the prior pass's
+   quote): confirmed identical to what was previously recorded — the
+   repeal of Articles 30–31 and the Article 39 addition are real, valid,
+   and were never contradicted by a later instrument.
+
+### Resolved explanation
+
+**LLOC does not maintain a legally consolidated, amendment-merged English
+text of this law at all — it publishes the original 2012 translation as a
+static document, and each subsequent amendment as a separate, standalone
+translated document.** The "Published on the website on May 2024" date
+almost certainly refers to when that static translation was last
+re-uploaded/refreshed on LLOC's site, not to a re-derivation that folds in
+intervening amendments. LMRA's copy is very likely sourced from the same
+unconsolidated LLOC translation, which is why both agree with each other
+and both disagree with the (separately published) amendment text. This is
+consistent with both documents' own disclaimers, which promise only that
+the *Arabic Official Gazette* is authoritative — neither claims to be a
+maintained, amendment-integrated English version.
+
+**As a matter of current law**: Articles 30 and 31 are repealed, and
+Article 39 does carry the equal-pay-for-equal-value clause, effective 6
+August 2021 (day after the 5 August 2021 gazette publication, per Decree
+16/2021 Article Three). This is not in serious doubt given the gazette
+record checked above.
+
+**Practical guidance for implementation** (this is the part that still
+needs to be built correctly, not just "resolved and forgotten"): **no
+single official English document for Law 36/2012 can be trusted as
+self-consolidating.** Any future citation-integrity tooling or rule pack
+must treat the base law (`K3612`) plus all 4 amendments as **layered
+overlays applied in date order**, not read any one PDF/docx as the final
+word. This is a **repeatable pattern risk** for every other Bahraini law in
+this repo's source base (Decree-Law 24/1976, Law 78/2006, Law 19/2006,
+etc.) — none of those have had their own amendment lists checked this way
+yet. Recommended as a follow-up: verify whether the SIO/social-insurance
+laws already cited elsewhere have the same "unconsolidated translation"
+characteristic, since that would mean some already-cited "full text"
+figures could theoretically be pre-amendment too. Not confirmed either way
+yet — flagged as a new open item in §6.
+
+**A definitive human legal sign-off is still recommended before shipping
+equal-pay or women's-employment logic**, not because the current-law
+conclusion above is in doubt, but because compensation/discrimination
+liability is high-stakes enough to warrant a second opinion beyond this
+document's own gazette cross-check.
 
 ---
 
@@ -140,7 +186,7 @@ review — not resolved by this document.**
 |---|---|---|
 | **Wage payment timing** | Monthly-rate workers: paid **at least once a month**. All workers: paid **at least once a week** unless otherwise agreed (except production-basis work >2 weeks, which gets weekly payments on account). Final settlement: **immediate** if employer-initiated termination; **within 7 days** if the worker resigns. | Art. 40(b) |
 | **Late-payment penalty** | **6% per annum** for delays up to 6 months, **+1%/month** thereafter, capped at **12% per annum**. | Art. 40(c) |
-| **Wage-discrimination prohibition** | Original text: prohibited on basis of sex, ethnic origin, language, religion, belief. **Per §4 above, an equal-value-work amendment via Decree 16/2021 is not reflected in the current LMRA PDF — flagged, not resolved.** | Art. 39 |
+| **Wage-discrimination prohibition** | Base text: prohibited on basis of sex, ethnic origin, language, religion, belief. **As of 6 August 2021 (Decree 16/2021, in force, confirmed via LLOC's official amendments list — see §4), a second clause applies: discrimination in wages between male and female workers in work of equal value is also prohibited.** Neither LMRA's nor LLOC's "full text" English document shows this second clause — it must be applied as a manual overlay, not read off either source directly. | Art. 39 (as amended by Decree 16/2021) |
 | **Notice period** | **30 days minimum**, either party, in writing; may be extended by agreement if employer-initiated; payment in lieu of notice = wage for the notice period; if employer-initiated, notice period counts toward service; worker gets 1 day/week (or 8 hrs/week) paid job-search leave during employer-given notice. | Art. 99–100 |
 | **Termination during leave** | Employer **may not terminate** during any worker leave; notice given during leave only takes effect the day after leave ends. | Art. 102 |
 | **Unfair dismissal grounds** | Sex/color/religion/belief/social status/family responsibility/pregnancy/childbirth/breastfeeding; trade-union membership or activity; filing a (non-vexatious) complaint/case against employer; exercising a leave right; wage attachment placed on the worker. Court may order **reinstatement** for union-related dismissals specifically. | Art. 104 |
@@ -164,6 +210,7 @@ review — not resolved by this document.**
 - **Whether Article 116's "leaving indemnity" population (workers not subject to the Social Insurance Law) is a live, non-empty category today** — needs cross-referencing against the Social Insurance Law's actual coverage scope (Decree-Law 24/1976, already fully retrieved in `BAHRAIN_PAYROLL_SOURCES.md` §2a) to determine who, if anyone, this Article 116 provision still applies to in practice.
 - **Domestic workers' relationship to Law 36/2012** — this pass did not confirm whether/how domestic workers are covered or excluded from the Labour Law itself (separate from the LMRA work-permit regulation already covered in the payroll doc). Flagged for HIS-66/§5 domestic-worker research.
 - **GCC nationals** — Law 36/2012 itself does not appear (in the parts read) to carve out GCC nationals specially; their distinct treatment is expected to come from the SIO/social-insurance side (Law 68/2006, still blocked per `BAHRAIN_PAYROLL_SOURCES.md` §5) rather than the Labour Law. Not independently confirmed this pass.
+- **New, from §4's investigation**: whether other already-cited Bahraini laws in this repo (Decree-Law 24/1976, Law 78/2006, Law 19/2006, Law 36/2012 itself for provisions not yet amendment-checked) have their own "unconsolidated English translation" gap the same way Law 36/2012 does. Not checked yet for any of them — each one's official LLOC amendments list should be reviewed before treating its "full text" as current, not just for Law 36/2012.
 
 ---
 
