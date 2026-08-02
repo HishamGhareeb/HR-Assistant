@@ -195,6 +195,33 @@ async def test_happy_path_returns_answer_and_suggestions():
 
 
 @pytest.mark.asyncio
+async def test_trace_outputs_do_not_include_raw_answer_or_suggestion_reasoning():
+    raw = json.dumps(
+        {
+            "answer": "Sarah's SSN is 123-45-6789.",
+            "suggestions": [
+                {
+                    "category": "leave_expiring",
+                    "reasoning": "Sarah's sensitive leave details.",
+                    "record_reference": "salary-slip-123",
+                }
+            ],
+        }
+    )
+    pipeline, fakes = build_pipeline(authorized_ids={"sarah_leave"}, raw_claude_response=raw)
+
+    await pipeline.handle_question(IDENTITY, "What is Sarah's SSN?")
+
+    trace = fakes["tracer"].trace
+    serialized_trace = json.dumps(trace.generations) + json.dumps(trace.spans)
+    assert "123-45-6789" not in serialized_trace
+    assert "Sarah's sensitive leave details" not in serialized_trace
+    assert "salary-slip-123" not in serialized_trace
+    assert "leave_expiring" in serialized_trace
+    assert "suggestion_count" in serialized_trace
+
+
+@pytest.mark.asyncio
 async def test_no_authorized_documents_returns_no_info_response():
     pipeline, fakes = build_pipeline(authorized_ids=set())
 

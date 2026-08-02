@@ -11,15 +11,25 @@ from pydantic import BaseModel, Field
 
 from .audit import AuditLogger, HashChainedJsonlAuditSink
 from .auth import TokenVerifier, build_identity_dependency, jwks_key_resolver, static_key_resolver
-from .claude_client import ClaudeClient, Suggestion
+from .claude_client import ClaudeClient
 from .config import Config
-from .domain import Identity
+from .domain import Identity, Suggestion, SuggestionStatus
 from .llm_guard_scan import OutputScanner
 from .observability import Metrics
 from .onyx_client import OnyxClient
 from .openfga_client import OpenFgaFilter
 from .pipeline import Pipeline
 from .resilience import bind_request_id
+from .suggestions import (
+    HrReviewAuthorizer,
+    JsonlSuggestionStore,
+    StaticHrReviewAuthorizer,
+    StoredSuggestion,
+    SuggestionAuthorizationError,
+    SuggestionNotFoundError,
+    SuggestionStore,
+    SuggestionTransitionError,
+)
 from .tracer import Tracer
 
 
@@ -47,7 +57,58 @@ class QuestionResponse(BaseModel):
     blocked: bool
 
 
-def build_pipeline(config: Config) -> Pipeline:
+class ReviewDecisionRequest(BaseModel):
+    action: SuggestionStatus
+    note: str | None = Field(default=None, max_length=2_000)
+
+
+class ReviewDecisionResponse(BaseModel):
+    decision_id: str
+    action: SuggestionStatus
+    decided_by: str
+    decided_at: str
+    note: str | None
+
+
+class ReviewSuggestionResponse(BaseModel):
+    suggestion_id: str
+    tenant_id: str
+    category: str
+    reasoning: str
+    record_reference: str | None
+    status: SuggestionStatus
+    created_at: str
+    decided_at: str | None
+    decided_by: str | None
+    decision_history: list[ReviewDecisionResponse] = []
+
+    @classmethod
+    def from_stored(cls, stored: StoredSuggestion) -> "ReviewSuggestionResponse":
+        suggestion = stored.suggestion
+        return cls(
+            suggestion_id=suggestion.suggestion_id,
+            tenant_id=suggestion.tenant_id,
+            category=suggestion.category,
+            reasoning=suggestion.reasoning,
+            record_reference=suggestion.record_reference,
+            status=suggestion.status,
+            created_at=suggestion.created_at.isoformat(),
+            decided_at=suggestion.decided_at.isoformat() if suggestion.decided_at else None,
+            decided_by=suggestion.decided_by,
+            decision_history=[
+                ReviewDecisionResponse(
+                    decision_id=decision.decision_id,
+                    action=decision.action,
+                    decided_by=decision.decided_by,
+                    decided_at=decision.decided_at.isoformat(),
+                    note=decision.note,
+                )
+                for decision in stored.decision_history
+            ],
+        )
+
+
+def build_pipeline(config: Config, suggestion_store: SuggestionStore | None = None) -> Pipeline:
     return Pipeline(
         onyx=OnyxClient(config.onyx_api_url, config.onyx_api_key),
         openfga=OpenFgaFilter(
@@ -67,6 +128,7 @@ def build_pipeline(config: Config) -> Pipeline:
             privacy_key=config.audit_privacy_key,
         ),
         metrics=Metrics(),
+        suggestion_store=suggestion_store,
     )
 
 
@@ -84,7 +146,22 @@ def build_token_verifier(config: Config) -> TokenVerifier:
     return TokenVerifier(key_resolver=key_resolver, issuer=config.auth_issuer, audience=config.auth_audience)
 
 
-def create_app(pipeline: Pipeline | None = None, verifier: TokenVerifier | None = None) -> FastAPI:
+def build_review_authorizer(config: Config) -> HrReviewAuthorizer:
+    try:
+        reviewers = json.loads(config.hr_reviewers_json)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"HR_REVIEWERS_JSON is not valid JSON: {exc}") from exc
+    if not isinstance(reviewers, dict):
+        raise RuntimeError("HR_REVIEWERS_JSON must be a JSON object keyed by tenant_id")
+    return StaticHrReviewAuthorizer(reviewers)
+
+
+def create_app(
+    pipeline: Pipeline | None = None,
+    verifier: TokenVerifier | None = None,
+    suggestion_store: SuggestionStore | None = None,
+    review_authorizer: HrReviewAuthorizer | None = None,
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Readiness must remain observable even before deployment secrets are
@@ -92,6 +169,8 @@ def create_app(pipeline: Pipeline | None = None, verifier: TokenVerifier | None 
         app.state.pipeline = pipeline
         app.state.verifier = verifier
         app.state.identity_dependency = build_identity_dependency(verifier) if verifier is not None else None
+        app.state.suggestion_store = suggestion_store
+        app.state.review_authorizer = review_authorizer
         yield
 
     app = FastAPI(
@@ -118,7 +197,8 @@ def create_app(pipeline: Pipeline | None = None, verifier: TokenVerifier | None 
         if active_pipeline is not None:
             return active_pipeline
         try:
-            active_pipeline = build_pipeline(Config())
+            config = Config()
+            active_pipeline = build_pipeline(config, suggestion_store=_get_or_build_suggestion_store(request, config))
         except RuntimeError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -126,6 +206,40 @@ def create_app(pipeline: Pipeline | None = None, verifier: TokenVerifier | None 
             ) from exc
         request.app.state.pipeline = active_pipeline
         return active_pipeline
+
+    def _get_or_build_suggestion_store(request: Request, config: Config) -> SuggestionStore:
+        active_store = request.app.state.suggestion_store
+        if active_store is not None:
+            return active_store
+        active_store = JsonlSuggestionStore(Path(config.suggestion_store_path))
+        request.app.state.suggestion_store = active_store
+        return active_store
+
+    def get_suggestion_store(request: Request) -> SuggestionStore:
+        active_store = request.app.state.suggestion_store
+        if active_store is not None:
+            return active_store
+        try:
+            return _get_or_build_suggestion_store(request, Config())
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"HR Assistant is not configured: {exc}",
+            ) from exc
+
+    def get_review_authorizer(request: Request) -> HrReviewAuthorizer:
+        active_authorizer = request.app.state.review_authorizer
+        if active_authorizer is not None:
+            return active_authorizer
+        try:
+            active_authorizer = build_review_authorizer(Config())
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"HR Assistant is not configured: {exc}",
+            ) from exc
+        request.app.state.review_authorizer = active_authorizer
+        return active_authorizer
 
     def get_identity_dependency(request: Request):
         """Lazily build (once) and cache the identity dependency from
@@ -152,6 +266,12 @@ def create_app(pipeline: Pipeline | None = None, verifier: TokenVerifier | None 
         dependency = get_identity_dependency(request)
         return await dependency(authorization=request.headers.get("Authorization"))
 
+    def authorize_hr_review(identity: Identity, authorizer: HrReviewAuthorizer) -> None:
+        try:
+            authorizer.authorize(identity)
+        except SuggestionAuthorizationError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to review suggestions") from exc
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -173,6 +293,54 @@ def create_app(pipeline: Pipeline | None = None, verifier: TokenVerifier | None 
             suggestions=[SuggestionResponse.from_domain(s) for s in result.suggestions],
             blocked=result.blocked,
         )
+
+    @app.get("/v1/hr/suggestions", response_model=list[ReviewSuggestionResponse])
+    async def list_suggestions(
+        status_filter: SuggestionStatus | None = None,
+        identity: Identity = Depends(get_identity),
+        store: SuggestionStore = Depends(get_suggestion_store),
+        authorizer: HrReviewAuthorizer = Depends(get_review_authorizer),
+    ) -> list[ReviewSuggestionResponse]:
+        authorize_hr_review(identity, authorizer)
+        return [
+            ReviewSuggestionResponse.from_stored(stored)
+            for stored in store.list(tenant_id=identity.tenant_id, status=status_filter)
+        ]
+
+    @app.get("/v1/hr/suggestions/{suggestion_id}", response_model=ReviewSuggestionResponse)
+    async def get_suggestion(
+        suggestion_id: str,
+        identity: Identity = Depends(get_identity),
+        store: SuggestionStore = Depends(get_suggestion_store),
+        authorizer: HrReviewAuthorizer = Depends(get_review_authorizer),
+    ) -> ReviewSuggestionResponse:
+        authorize_hr_review(identity, authorizer)
+        try:
+            return ReviewSuggestionResponse.from_stored(store.get(tenant_id=identity.tenant_id, suggestion_id=suggestion_id))
+        except SuggestionNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suggestion not found") from exc
+
+    @app.post("/v1/hr/suggestions/{suggestion_id}/decision", response_model=ReviewSuggestionResponse)
+    async def decide_suggestion(
+        suggestion_id: str,
+        body: ReviewDecisionRequest,
+        identity: Identity = Depends(get_identity),
+        store: SuggestionStore = Depends(get_suggestion_store),
+        authorizer: HrReviewAuthorizer = Depends(get_review_authorizer),
+    ) -> ReviewSuggestionResponse:
+        authorize_hr_review(identity, authorizer)
+        try:
+            stored = store.decide(
+                identity=identity,
+                suggestion_id=suggestion_id,
+                action=body.action,
+                note=body.note,
+            )
+        except SuggestionNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suggestion not found") from exc
+        except SuggestionTransitionError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        return ReviewSuggestionResponse.from_stored(stored)
 
     return app
 

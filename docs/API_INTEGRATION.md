@@ -36,6 +36,29 @@ Pipeline.handle_question(identity, question)
 QuestionResponse
 ```
 
+## HR suggestion review flow
+
+Generated suggestions are persisted after the answer payload passes
+authorization, output scanning, and schema validation. HR review endpoints
+reuse the same signed bearer-token identity, authorize the caller as a
+tenant-scoped reviewer, and only then read or change inbox state:
+
+```
+Authorization: Bearer <JWT>
+    |
+    v
+glue.auth.TokenVerifier -> Identity(tenant_id, user_id)
+    |
+    v
+StaticHrReviewAuthorizer       (tenant-scoped reviewer map)
+    |
+    v
+JsonlSuggestionStore           (list/view/approve/reject/dismiss)
+```
+
+Approval, rejection, and dismissal append immutable decision-history
+records. They do not call Frappe and do not mutate HR source systems.
+
 Every external call in that chain (Onyx, OpenFGA, Claude) is wrapped with
 `call_with_timeout` + `call_with_retries` + a per-dependency
 `CircuitBreaker` (HIS-17); the LLM Guard scan gets a timeout only (a local

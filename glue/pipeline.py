@@ -44,11 +44,12 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from .audit import AuditLogger
-from .claude_client import ClaudeClient, Suggestion
+from .claude_client import ClaudeClient
 from .context_budget import fit_to_budget
-from .domain import Identity
+from .domain import Identity, Suggestion
 from .llm_guard_scan import OutputScanner
 from .model_response import ModelResponseValidationError, validate_model_response
 from .observability import Metrics, safe_call
@@ -63,6 +64,7 @@ from .resilience import (
     current_request_id,
 )
 from .tracer import Tracer
+from .suggestions import SuggestionStore
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +103,7 @@ class Pipeline:
         guard_timeout_seconds: float = DEFAULT_GUARD_TIMEOUT_SECONDS,
         context_max_tokens: int = DEFAULT_CONTEXT_MAX_TOKENS,
         retry_policy: RetryPolicy | None = None,
+        suggestion_store: SuggestionStore | None = None,
     ) -> None:
         self._onyx = onyx
         self._openfga = openfga
@@ -115,6 +118,7 @@ class Pipeline:
         self._guard_timeout_seconds = guard_timeout_seconds
         self._context_max_tokens = context_max_tokens
         self._retry_policy = retry_policy or RetryPolicy()
+        self._suggestion_store = suggestion_store
         # One breaker per dependency, held for the process lifetime (not
         # per-request) -- that's what lets sustained failure trip it.
         self._onyx_circuit = CircuitBreaker(name="onyx")
@@ -202,9 +206,18 @@ class Pipeline:
                 return PipelineResult(answer=answer, suggestions=[], blocked=True)
 
             suggestions = [
-                Suggestion(category=s.category, reasoning=s.reasoning, record_reference=s.record_reference)
+                Suggestion(
+                    tenant_id=identity.tenant_id,
+                    category=s.category,
+                    reasoning=s.reasoning,
+                    record_reference=s.record_reference,
+                    created_at=datetime.now(timezone.utc),
+                )
                 for s in validated.suggestions
             ]
+            if self._suggestion_store is not None:
+                for suggestion in suggestions:
+                    self._suggestion_store.create(suggestion)
             suggestion_count = len(suggestions)
             model_outcome = "answered"
             answer = validated.answer
@@ -213,9 +226,10 @@ class Pipeline:
                     lambda: trace.generation(
                         name="claude-answer",
                         output={
-                            "answer": answer,
+                            "answered": True,
+                            "suggestion_count": suggestion_count,
                             "suggestions": [
-                                {"category": s.category, "reasoning": s.reasoning, "record_reference": s.record_reference}
+                                {"category": s.category, "status": s.status.value}
                                 for s in suggestions
                             ],
                         },
@@ -223,7 +237,10 @@ class Pipeline:
                     component="langfuse",
                 )
                 safe_call(
-                    lambda: trace.span(name="result", output={"answer": answer, "blocked": False}),
+                    lambda: trace.span(
+                        name="result",
+                        output={"model_outcome": model_outcome, "suggestion_count": suggestion_count, "blocked": False},
+                    ),
                     component="langfuse",
                 )
             return PipelineResult(answer=answer, suggestions=suggestions, blocked=False)

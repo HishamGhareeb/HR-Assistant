@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime, timezone
 
 import jwt
 import pytest
@@ -18,9 +19,10 @@ from prometheus_client import CollectorRegistry
 
 from glue.app import create_app
 from glue.auth import TokenVerifier, static_key_resolver
-from glue.domain import Identity
+from glue.domain import Identity, Suggestion, SuggestionStatus
 from glue.observability import Metrics
 from glue.pipeline import PipelineResult
+from glue.suggestions import InMemorySuggestionStore, StaticHrReviewAuthorizer
 
 ISSUER = "https://auth.hr-assistant.internal"
 AUDIENCE = "hr-assistant-api"
@@ -70,6 +72,28 @@ class FakePipeline:
 
 def build_client(pipeline=None, verifier=None) -> TestClient:
     return TestClient(create_app(pipeline or FakePipeline(), verifier or make_verifier()))
+
+
+def build_review_client(store, reviewers=None, pipeline=None) -> TestClient:
+    return TestClient(
+        create_app(
+            pipeline or FakePipeline(),
+            make_verifier(),
+            suggestion_store=store,
+            review_authorizer=StaticHrReviewAuthorizer(reviewers or {"acme": ["hr-1"]}),
+        )
+    )
+
+
+def make_suggestion(tenant_id="acme", suggestion_id="sug-1") -> Suggestion:
+    return Suggestion(
+        suggestion_id=suggestion_id,
+        tenant_id=tenant_id,
+        category="leave_expiring",
+        reasoning="Carried-over leave expires soon.",
+        record_reference="LEAVE-1",
+        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
 
 
 # --- health / unauthenticated basics --------------------------------------
@@ -146,6 +170,64 @@ def test_different_tenant_token_produces_different_identity():
     identity, _question = pipeline.calls[0]
     assert identity.tenant_id == "globex"
     assert identity.user_id == "david"
+
+
+# --- HR suggestion review inbox ------------------------------------------
+
+
+def test_review_inbox_requires_authorized_hr_reviewer_before_listing():
+    store = InMemorySuggestionStore()
+    store.create(make_suggestion())
+
+    with build_review_client(store) as client:
+        response = client.get("/v1/hr/suggestions", headers={"Authorization": f"Bearer {make_token(user_id='sarah')}"})
+
+    assert response.status_code == 403
+
+
+def test_review_inbox_lists_only_callers_tenant():
+    store = InMemorySuggestionStore()
+    store.create(make_suggestion("acme", "acme-sug"))
+    store.create(make_suggestion("globex", "globex-sug"))
+
+    with build_review_client(store) as client:
+        response = client.get("/v1/hr/suggestions", headers={"Authorization": f"Bearer {make_token(user_id='hr-1')}"})
+
+    assert response.status_code == 200
+    assert [item["suggestion_id"] for item in response.json()] == ["acme-sug"]
+
+
+def test_review_decision_approves_without_mutating_pipeline_or_frappe():
+    store = InMemorySuggestionStore()
+    store.create(make_suggestion())
+    pipeline = FakePipeline()
+
+    with build_review_client(store, pipeline=pipeline) as client:
+        response = client.post(
+            "/v1/hr/suggestions/sug-1/decision",
+            headers={"Authorization": f"Bearer {make_token(user_id='hr-1')}"},
+            json={"action": "approved", "note": "Verified by HR."},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "approved"
+    assert body["decided_by"] == "hr-1"
+    assert body["decision_history"][0]["note"] == "Verified by HR."
+    assert pipeline.calls == []  # approval is a review record only; it does not call downstream mutation paths
+
+
+def test_review_rejects_invalid_second_transition():
+    store = InMemorySuggestionStore()
+    store.create(make_suggestion())
+
+    with build_review_client(store) as client:
+        headers = {"Authorization": f"Bearer {make_token(user_id='hr-1')}"}
+        first = client.post("/v1/hr/suggestions/sug-1/decision", headers=headers, json={"action": "rejected"})
+        second = client.post("/v1/hr/suggestions/sug-1/decision", headers=headers, json={"action": "approved"})
+
+    assert first.status_code == 200
+    assert second.status_code == 409
 
 
 # --- request ID propagation -------------------------------------------
