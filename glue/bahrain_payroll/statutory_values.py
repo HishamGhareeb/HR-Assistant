@@ -192,3 +192,158 @@ EOSB_EMPLOYER_PENALTY_MAX_MULTIPLIER = StatutoryValue(
         quote="not less than the unpaid amount and not exceeding three times that amount",
     ),
 )
+
+# --- Bahraini SIO: old-age/disability/death pension branch (Article 33, ---
+# --- Decree-Law 24/1976 as replaced by Law No. (14) of 2022) --------------
+#
+# Only the EMPLOYEE share is registered as an executable rate. The employer
+# share's target rate (17%) and starting rate (11%) are documented, but the
+# amendment text only says the employer rate "increases annually by a rate
+# of 1%" without stating the exact calendar trigger for each step -- unlike
+# the employee share, which explicitly steps "at the beginning of the year
+# following the entry into force of the law." Per HIS-68's scope decision,
+# the employer pension share stays unregistered (fails closed) until a
+# human/payroll reviewer confirms the annual step-up trigger date. See
+# docs/BAHRAIN_RATE_VERSIONING.md for the standing record of this decision.
+
+BAHRAINI_PENSION_EMPLOYEE_RATE_PERCENT_INITIAL = StatutoryValue(
+    name="bahraini_pension_employee_rate_percent_initial",
+    value=6,
+    unit="percent",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law No. (14) of 2022",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_SIO_CONTRIBUTION_RATES.md",
+        quote="upon enforcement, increases to the full 7%",
+    ),
+    note=(
+        "Effective 2022-04-19 (day after the LLOC-recorded Official Gazette "
+        "publication date of 18 April 2022, Gazette No. 3599) until the "
+        "2023-01-01 step-up to 7%."
+    ),
+)
+
+BAHRAINI_PENSION_EMPLOYEE_RATE_PERCENT_TARGET = StatutoryValue(
+    name="bahraini_pension_employee_rate_percent_target",
+    value=7,
+    unit="percent",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law No. (14) of 2022",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_SIO_CONTRIBUTION_RATES.md",
+        quote="the beginning of the year following the entry into force of the law",
+    ),
+    note="Effective 2023-01-01: the calendar year following Law 14/2022's 2022 entry into force.",
+)
+
+BAHRAINI_PENSION_EMPLOYEE_INITIAL_EFFECTIVE_DATE = StatutoryValue(
+    name="bahraini_pension_employee_initial_effective_date",
+    value="2022-04-19",
+    unit="date",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law No. (14) of 2022",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_SIO_CONTRIBUTION_RATES.md",
+        quote="18 April 2022, in force the day after Official Gazette publication",
+    ),
+)
+
+BAHRAINI_PENSION_EMPLOYEE_TARGET_EFFECTIVE_DATE = StatutoryValue(
+    name="bahraini_pension_employee_target_effective_date",
+    value="2023-01-01",
+    unit="date",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law No. (14) of 2022",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_SIO_CONTRIBUTION_RATES.md",
+        quote="the beginning of the year following the entry into force of the law",
+    ),
+)
+
+# --- Employment injury (Decree-Law 24/1976, Article 47) -------------------
+#
+# Deliberately NOT registered as an executable rate. The 3% figure and its
+# original citation are documented for traceability only; per HIS-68/69's
+# scope decision it stays out of the rate registry until the amendment
+# currency question is resolved (LLOC's pagination for this law's older
+# amendments -- pre-2009 -- could not be reached this research pass).
+
+EMPLOYMENT_INJURY_RATE_CITATION_NOT_REGISTERED = StatutoryCitation(
+    section="§1",
+    instrument="Decree-Law No. (24) of 1976, Article 47",
+    retrieved="2026-08-02",
+    source_doc="docs/BAHRAIN_NON_BAHRAINI_SIO_RATES.md",
+    quote="3% of monthly wages, employer-only",
+)
+
+# --- Unemployment insurance (Law 78/2006, Article 6) -----------------------
+#
+# Nationality-neutral: applies identically to Bahraini and non-Bahraini
+# private-sector workers (see docs/BAHRAIN_NON_BAHRAINI_SIO_RATES.md §1).
+# The employer's 1% share is paid by the Labour Fund (Tamkeen) for
+# private-sector employers, not charged to the employer directly -- modeled
+# via BahrainContributionPayer.LABOUR_FUND, not EMPLOYER.
+
+BAHRAIN_UNEMPLOYMENT_EMPLOYEE_RATE_PERCENT = StatutoryValue(
+    name="bahrain_unemployment_employee_rate_percent",
+    value=1,
+    unit="percent",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law 78/2006",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_NON_BAHRAINI_SIO_RATES.md",
+        quote="1% of wage from the insured employee, 1% from the employer, 1% from the Government",
+    ),
+)
+
+BAHRAIN_UNEMPLOYMENT_LABOUR_FUND_RATE_PERCENT = StatutoryValue(
+    name="bahrain_unemployment_labour_fund_rate_percent",
+    value=1,
+    unit="percent",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law 78/2006",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_NON_BAHRAINI_SIO_RATES.md",
+        quote="Tamkeen (the Labour Fund) covers the private-sector employer's 1% share",
+    ),
+    note="Paid by the Labour Fund on the private-sector employer's behalf, not deducted from the employer directly.",
+)
+
+BAHRAIN_UNEMPLOYMENT_GOVERNMENT_RATE_PERCENT = StatutoryValue(
+    name="bahrain_unemployment_government_rate_percent",
+    value=1,
+    unit="percent",
+    citation=StatutoryCitation(
+        section="§1",
+        instrument="Law 78/2006",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_NON_BAHRAINI_SIO_RATES.md",
+        quote="1% of wage from the insured employee, 1% from the employer, 1% from the Government",
+    ),
+)
+
+BAHRAIN_UNEMPLOYMENT_LAW_EFFECTIVE_DATE = StatutoryValue(
+    name="bahrain_unemployment_law_effective_date",
+    value="2006-11-23",
+    unit="date",
+    citation=StatutoryCitation(
+        section="§2",
+        instrument="Law No. (78) of 2006",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_PAYROLL_SOURCES.md",
+        quote="Law No. (78) of 2006 with respect to Insurance Against Unemployment",
+    ),
+    note=(
+        "This is the LLOC-recorded Official Gazette publication date, used as a "
+        "conservative floor. The law's exact commencement date (which may be "
+        "some days after publication per its own commencement article) was not "
+        "independently re-confirmed -- immaterial for any payroll date in "
+        "practice, since it is decades in the past."
+    ),
+)

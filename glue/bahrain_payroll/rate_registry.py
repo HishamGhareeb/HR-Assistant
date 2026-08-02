@@ -9,13 +9,21 @@ instead of falling back to an implied "current" number.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
 from typing import Iterable
 
 from glue.bahrain_payroll.citation_guard import StatutoryValue
 from glue.bahrain_payroll.statutory_values import (
+    BAHRAINI_PENSION_EMPLOYEE_INITIAL_EFFECTIVE_DATE,
+    BAHRAINI_PENSION_EMPLOYEE_RATE_PERCENT_INITIAL,
+    BAHRAINI_PENSION_EMPLOYEE_RATE_PERCENT_TARGET,
+    BAHRAINI_PENSION_EMPLOYEE_TARGET_EFFECTIVE_DATE,
+    BAHRAIN_UNEMPLOYMENT_EMPLOYEE_RATE_PERCENT,
+    BAHRAIN_UNEMPLOYMENT_GOVERNMENT_RATE_PERCENT,
+    BAHRAIN_UNEMPLOYMENT_LABOUR_FUND_RATE_PERCENT,
+    BAHRAIN_UNEMPLOYMENT_LAW_EFFECTIVE_DATE,
     EOSB_EFFECTIVE_DATE,
     EOSB_FIRST_THREE_YEARS_CONTRIBUTION_RATE_PERCENT,
     EOSB_FIRST_TIER_YEARS,
@@ -162,6 +170,89 @@ BAHRAIN_PAYROLL_RATE_REGISTRY = BahrainPayrollRateRegistry(
             effective_from=date.fromisoformat(str(EOSB_EFFECTIVE_DATE.value)),
             min_completed_service_years=EOSB_FIRST_TIER_YEARS,
             note="Post-1-March-2024 funded EOSB contribution; subsequent service tier.",
+        ),
+        # --- Bahraini SIO pension branch (Article 33, Law 14/2022) --------
+        # Employee share only -- see docs/BAHRAIN_RATE_VERSIONING.md for why
+        # the employer share is deliberately not registered.
+        BahrainPayrollRate(
+            code="bahraini_pension_employee_initial",
+            worker_category=BahrainWorkerCategory.BAHRAINI_PRIVATE,
+            branch=BahrainContributionBranch.OLD_AGE_DISABILITY_DEATH,
+            payer=BahrainContributionPayer.EMPLOYEE,
+            percent=BAHRAINI_PENSION_EMPLOYEE_RATE_PERCENT_INITIAL,
+            effective_from=date.fromisoformat(
+                str(BAHRAINI_PENSION_EMPLOYEE_INITIAL_EFFECTIVE_DATE.value)
+            ),
+            effective_to=date.fromisoformat(
+                str(BAHRAINI_PENSION_EMPLOYEE_TARGET_EFFECTIVE_DATE.value)
+            )
+            - timedelta(days=1),
+            note="6% initial rate, 2022-04-19 through 2022-12-31.",
+        ),
+        BahrainPayrollRate(
+            code="bahraini_pension_employee_target",
+            worker_category=BahrainWorkerCategory.BAHRAINI_PRIVATE,
+            branch=BahrainContributionBranch.OLD_AGE_DISABILITY_DEATH,
+            payer=BahrainContributionPayer.EMPLOYEE,
+            percent=BAHRAINI_PENSION_EMPLOYEE_RATE_PERCENT_TARGET,
+            effective_from=date.fromisoformat(
+                str(BAHRAINI_PENSION_EMPLOYEE_TARGET_EFFECTIVE_DATE.value)
+            ),
+            note="7% target rate, effective 2023-01-01 onward.",
+        ),
+        # --- Unemployment insurance (Law 78/2006 Article 6) ----------------
+        # Nationality-neutral: identical rows for Bahraini and non-Bahraini
+        # private-sector workers. The "employer share" is paid by the Labour
+        # Fund (Tamkeen), not the employer -- there is deliberately no
+        # EMPLOYER-payer row for this branch.
+        *(
+            BahrainPayrollRate(
+                code=f"{category.value}_unemployment_employee",
+                worker_category=category,
+                branch=BahrainContributionBranch.UNEMPLOYMENT,
+                payer=BahrainContributionPayer.EMPLOYEE,
+                percent=BAHRAIN_UNEMPLOYMENT_EMPLOYEE_RATE_PERCENT,
+                effective_from=date.fromisoformat(
+                    str(BAHRAIN_UNEMPLOYMENT_LAW_EFFECTIVE_DATE.value)
+                ),
+            )
+            for category in (
+                BahrainWorkerCategory.BAHRAINI_PRIVATE,
+                BahrainWorkerCategory.NON_BAHRAINI_PRIVATE,
+            )
+        ),
+        *(
+            BahrainPayrollRate(
+                code=f"{category.value}_unemployment_labour_fund",
+                worker_category=category,
+                branch=BahrainContributionBranch.UNEMPLOYMENT,
+                payer=BahrainContributionPayer.LABOUR_FUND,
+                percent=BAHRAIN_UNEMPLOYMENT_LABOUR_FUND_RATE_PERCENT,
+                effective_from=date.fromisoformat(
+                    str(BAHRAIN_UNEMPLOYMENT_LAW_EFFECTIVE_DATE.value)
+                ),
+                note="Paid by the Labour Fund (Tamkeen) on the private-sector employer's behalf.",
+            )
+            for category in (
+                BahrainWorkerCategory.BAHRAINI_PRIVATE,
+                BahrainWorkerCategory.NON_BAHRAINI_PRIVATE,
+            )
+        ),
+        *(
+            BahrainPayrollRate(
+                code=f"{category.value}_unemployment_government",
+                worker_category=category,
+                branch=BahrainContributionBranch.UNEMPLOYMENT,
+                payer=BahrainContributionPayer.GOVERNMENT,
+                percent=BAHRAIN_UNEMPLOYMENT_GOVERNMENT_RATE_PERCENT,
+                effective_from=date.fromisoformat(
+                    str(BAHRAIN_UNEMPLOYMENT_LAW_EFFECTIVE_DATE.value)
+                ),
+            )
+            for category in (
+                BahrainWorkerCategory.BAHRAINI_PRIVATE,
+                BahrainWorkerCategory.NON_BAHRAINI_PRIVATE,
+            )
         ),
     )
 )
