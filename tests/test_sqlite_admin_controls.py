@@ -134,7 +134,9 @@ async def test_sqlite_admin_failed_sync_is_durable_and_retryable(tmp_path):
     assert failed.status == "failed"
     assert failed.failed[0].name == "POL-1"
     assert retried.status == "completed"
-    assert [run.status for run in runs] == ["completed", "failed"]
+    assert sorted(run.status for run in runs) == ["completed", "failed"]
+    assert restored.list_sources("acme")[0].last_run_id == retried.run_id
+    assert restored.list_sources("acme")[0].last_status == "completed"
 
 
 @pytest.mark.asyncio
