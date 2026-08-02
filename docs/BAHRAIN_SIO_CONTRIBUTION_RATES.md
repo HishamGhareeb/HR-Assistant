@@ -171,11 +171,13 @@ for domestic workers' SIO applicability — worth updating
   successfully elsewhere in this repo's research failed identically here).
   Worth retrying in a future pass in case it's a transient issue, or via
   the Arabic-language version of the page.
-- **Unemployment insurance contribution rate** — Law 78/2006's full text is
-  in `BAHRAIN_PAYROLL_SOURCES.md` §2a-ter, but the specific contribution
-  percentage was not extracted in that pass; needs a targeted re-read. The
-  same broken "Unemployment insurance and benefit" FAQ tab noted above was
-  also attempted and failed the same way.
+- **Unemployment insurance contribution rate — resolved** in
+  `docs/BAHRAIN_NON_BAHRAINI_SIO_RATES.md` (HIS-61 research): **1% employee
+  / 1% employer (paid via the Labour Fund/Tamkeen for private-sector
+  employers, not the employer directly) / 1% government**, per Law 78/2006
+  Article 6. This branch's scope (Article 2 of that law) is tied to
+  employment-injury coverage, which is nationality-neutral — so this rate
+  applies to Bahraini and non-Bahraini employees identically.
 - **Sickness/maternity temporary-disability branch rate** — not yet located
   anywhere.
 - **Wage cap/floor for contribution purposes** — not yet located; the
