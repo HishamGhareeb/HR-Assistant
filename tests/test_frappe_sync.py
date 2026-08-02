@@ -18,6 +18,7 @@ from glue.frappe_sync import (
     map_record,
 )
 from glue.openfga_client import scoped_object_id
+from glue.sqlite_checkpoints import SqliteCheckpointStore
 
 
 class FakeDocumentIndex:
@@ -299,6 +300,63 @@ async def test_failed_record_does_not_advance_checkpoint_and_is_retried():
     assert second.failed == []
     assert second.created == 1
     assert len(index.documents) == 1
+
+
+@pytest.mark.asyncio
+async def test_sqlite_checkpoints_make_second_run_unchanged_after_restart(tmp_path):
+    path = tmp_path / "sync-checkpoints.sqlite3"
+    index = FakeDocumentIndex()
+    tuples = FakeTupleWriter()
+    engine = SyncEngine(index, tuples, checkpoints=SqliteCheckpointStore(path))
+    records = [employee(), leave_application()]
+
+    first = await engine.sync_all("acme", records)
+    restarted = SyncEngine(index, tuples, checkpoints=SqliteCheckpointStore(path))
+    second = await restarted.sync_all("acme", records)
+
+    assert first.created == 2
+    assert second.unchanged == 2
+    assert second.created == 0
+    assert index.upsert_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_sqlite_checkpoints_are_tenant_scoped_for_same_record_id(tmp_path):
+    path = tmp_path / "sync-checkpoints.sqlite3"
+    index = FakeDocumentIndex()
+    tuples = FakeTupleWriter()
+    acme_engine = SyncEngine(index, tuples, checkpoints=SqliteCheckpointStore(path))
+    globex_engine = SyncEngine(index, tuples, checkpoints=SqliteCheckpointStore(path))
+
+    acme = await acme_engine.sync_all("acme", [leave_application(tenant_id="acme")])
+    globex = await globex_engine.sync_all("globex", [leave_application(tenant_id="globex")])
+
+    assert acme.created == 1
+    assert globex.created == 1
+    assert {
+        checkpoint_key
+        for checkpoint_key in [
+            await SqliteCheckpointStore(path).get("acme", "Leave Application", "LA-1"),
+            await SqliteCheckpointStore(path).get("globex", "Leave Application", "LA-1"),
+        ]
+    }
+    assert len(index.documents) == 2
+
+
+@pytest.mark.asyncio
+async def test_sqlite_checkpoint_does_not_advance_failed_record_after_restart(tmp_path):
+    path = tmp_path / "sync-checkpoints.sqlite3"
+    index = FlakyDocumentIndex(fail_times=1)
+    tuples = FakeTupleWriter()
+    engine = SyncEngine(index, tuples, checkpoints=SqliteCheckpointStore(path))
+    records = [leave_application()]
+
+    failed = await engine.sync_all("acme", records)
+    retried = await SyncEngine(index, tuples, checkpoints=SqliteCheckpointStore(path)).sync_all("acme", records)
+
+    assert failed.failed[0].name == "LA-1"
+    assert retried.created == 1
+    assert await SqliteCheckpointStore(path).get("acme", "Leave Application", "LA-1") is not None
 
 
 @pytest.mark.asyncio

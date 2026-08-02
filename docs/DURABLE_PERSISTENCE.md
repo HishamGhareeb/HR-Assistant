@@ -10,7 +10,7 @@ This document records the transition path so storage work does not leak into rou
 |---|---|---|
 | Suggestion review inbox | In-memory, JSONL, and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
 | Admin controls | In-memory and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
-| Frappe sync checkpoints | In-memory store | Transitional |
+| Frappe sync checkpoints | In-memory and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
 | Audit events | Hash-chained JSONL | Tamper-evident local sink, not WORM |
 | Authorization tuples | OpenFGA | External authorization store |
 | Retrieval documents | Onyx | External retrieval system |
@@ -40,6 +40,16 @@ It preserves:
 - visible failed sync runs that remain retryable;
 - synthetic revoke/resync behavior through the existing `SyncEngine`;
 - no Frappe write path.
+
+`glue.sqlite_checkpoints.SqliteCheckpointStore` adds a durable bridge for Frappe sync checkpoints.
+
+It preserves:
+
+- tenant-scoped checkpoint keys;
+- document IDs and OpenFGA tuples from the last successful sync;
+- unchanged detection across process restarts;
+- retry behavior where failed records do not advance checkpoints;
+- protocol compatibility with `SyncEngine`.
 
 ## Production target
 
