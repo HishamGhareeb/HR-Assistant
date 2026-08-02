@@ -14,7 +14,7 @@ import pytest
 from prometheus_client import CollectorRegistry
 
 from glue.audit import AuditLogger, InMemoryAuditSink
-from glue.domain import Identity
+from glue.domain import DocumentClassification, Identity
 from glue.observability import Metrics
 from glue.onyx_client import Document
 from glue.openfga_client import OpenFgaFilter
@@ -35,7 +35,12 @@ def _fresh_request_id():
     bind_request_id()
 
 
-def make_document(object_id: str, tenant_id: str = "acme", chunk: str = "chunk") -> Document:
+def make_document(
+    object_id: str,
+    tenant_id: str = "acme",
+    chunk: str = "chunk",
+    classification: DocumentClassification = DocumentClassification.INTERNAL,
+) -> Document:
     return Document(
         object_type="leave_record",
         object_id=object_id,
@@ -43,6 +48,7 @@ def make_document(object_id: str, tenant_id: str = "acme", chunk: str = "chunk")
         tenant_id=tenant_id,
         source="onyx",
         retrieved_at=datetime.now(timezone.utc),
+        classification=classification,
     )
 
 
@@ -50,26 +56,53 @@ class FakeOnyx:
     def __init__(self, candidates, error=None):
         self._candidates = candidates
         self._error = error
-        self.calls: list[tuple[str, str | None]] = []
+        self.calls: list[tuple[str, str | None, tuple[DocumentClassification, ...] | None]] = []
 
-    async def search(self, question, *, tenant_id=None):
-        self.calls.append((question, tenant_id))
+    async def search(self, question, *, tenant_id=None, allowed_classifications=None):
+        self.calls.append((question, tenant_id, allowed_classifications))
         if self._error is not None:
             raise self._error
-        return self._candidates
+        if allowed_classifications is None:
+            return self._candidates
+        allowed = set(allowed_classifications)
+        return [document for document in self._candidates if document.classification in allowed]
 
 
 class FakeOpenFga:
-    def __init__(self, authorized_ids, error=None):
+    def __init__(
+        self,
+        authorized_ids,
+        error=None,
+        allowed_classifications: tuple[DocumentClassification, ...] = (
+            DocumentClassification.PUBLIC,
+            DocumentClassification.INTERNAL,
+            DocumentClassification.MANAGER_ONLY,
+            DocumentClassification.HR_ONLY,
+        ),
+        access_error=None,
+    ):
         self._authorized_ids = authorized_ids
         self._error = error
+        self._allowed_classifications = allowed_classifications
+        self._access_error = access_error
         self.calls: list[tuple[str, str | None]] = []
+        self.access_calls: list[tuple[str, str]] = []
+
+    async def allowed_classifications(self, user_id, tenant_id):
+        self.access_calls.append((user_id, tenant_id))
+        if self._access_error is not None:
+            raise self._access_error
+        return self._allowed_classifications
 
     async def filter_authorized(self, user_id, documents, *, tenant_id=None):
         self.calls.append((user_id, tenant_id))
         if self._error is not None:
             raise self._error
-        return [d for d in documents if d.object_id in self._authorized_ids]
+        return [
+            d
+            for d in documents
+            if d.object_id in self._authorized_ids and (tenant_id is None or d.tenant_id == tenant_id)
+        ]
 
 
 class FakeClaude:
@@ -162,8 +195,181 @@ async def test_identity_tenant_and_user_are_passed_to_onyx_and_openfga():
 
     await pipeline.handle_question(IDENTITY, "How much leave do I have?")
 
-    assert fakes["onyx"].calls == [("How much leave do I have?", "acme")]
+    assert fakes["openfga"].access_calls == [("sarah", "acme")]
+    assert fakes["onyx"].calls == [
+        (
+            "How much leave do I have?",
+            "acme",
+            (
+                DocumentClassification.PUBLIC,
+                DocumentClassification.INTERNAL,
+                DocumentClassification.MANAGER_ONLY,
+                DocumentClassification.HR_ONLY,
+            ),
+        )
+    ]
     assert fakes["openfga"].calls == [("sarah", "acme")]
+
+
+# --- pre-retrieval access mask --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pre_retrieval_mask_limits_onyx_to_tenant_public_documents():
+    public_doc = make_document("tenant-handbook", classification=DocumentClassification.PUBLIC)
+    hr_doc = make_document("hr-investigation", classification=DocumentClassification.HR_ONLY)
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"tenant-handbook"},
+        onyx_docs=[public_doc, hr_doc],
+        openfga=FakeOpenFga(
+            authorized_ids={"tenant-handbook"},
+            allowed_classifications=(DocumentClassification.PUBLIC,),
+        ),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "What is the holiday policy?")
+
+    assert result.answer == "ok"
+    assert fakes["onyx"].calls[0][2] == (DocumentClassification.PUBLIC,)
+    assert fakes["claude"].received_context_chunks == ["chunk"]
+
+
+@pytest.mark.asyncio
+async def test_pre_retrieval_failure_default_denies_without_onyx_or_model_call():
+    pipeline, fakes = build_pipeline(
+        openfga=FakeOpenFga(
+            authorized_ids=set(),
+            access_error=ConnectionError("openfga down"),
+        )
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "What is the HR policy?")
+
+    assert result.answer == NO_INFO_RESPONSE
+    assert fakes["onyx"].calls == []
+    assert fakes["claude"].received_context_chunks is None
+    event = fakes["audit"].events[0]
+    assert event.model_outcome == "no_info"
+    assert event.retrieval_count == 0
+    assert event.authorized_count == 0
+
+
+@pytest.mark.asyncio
+async def test_no_allowed_classifications_stops_before_onyx_and_llm():
+    pipeline, fakes = build_pipeline(
+        openfga=FakeOpenFga(authorized_ids=set(), allowed_classifications=()),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "What can I see?")
+
+    assert result.answer == NO_INFO_RESPONSE
+    assert fakes["onyx"].calls == []
+    assert fakes["claude"].received_context_chunks is None
+
+
+@pytest.mark.asyncio
+async def test_employee_in_tenant_a_can_retrieve_tenant_a_public_docs():
+    public_doc = make_document("handbook", classification=DocumentClassification.PUBLIC)
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"handbook"},
+        onyx_docs=[public_doc],
+        openfga=FakeOpenFga(
+            authorized_ids={"handbook"},
+            allowed_classifications=(DocumentClassification.PUBLIC, DocumentClassification.INTERNAL),
+        ),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "holiday policy?")
+
+    assert result.answer == "ok"
+    assert fakes["claude"].received_context_chunks == ["chunk"]
+
+
+@pytest.mark.asyncio
+async def test_employee_in_tenant_a_cannot_retrieve_tenant_b_public_docs():
+    foreign_public_doc = make_document(
+        "handbook",
+        tenant_id="globex",
+        classification=DocumentClassification.PUBLIC,
+    )
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"handbook"},
+        onyx_docs=[foreign_public_doc],
+        openfga=FakeOpenFga(
+            authorized_ids={"handbook"},
+            allowed_classifications=(DocumentClassification.PUBLIC, DocumentClassification.INTERNAL),
+        ),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "holiday policy?")
+
+    assert result.answer == NO_INFO_RESPONSE
+    assert fakes["claude"].received_context_chunks is None
+
+
+@pytest.mark.asyncio
+async def test_internal_requires_tenant_employee_membership_and_document_authorization():
+    internal_doc = make_document("internal-policy", classification=DocumentClassification.INTERNAL)
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"internal-policy"},
+        onyx_docs=[internal_doc],
+        openfga=FakeOpenFga(
+            authorized_ids={"internal-policy"},
+            allowed_classifications=(DocumentClassification.PUBLIC,),
+        ),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "internal policy?")
+
+    assert result.answer == NO_INFO_RESPONSE
+    assert fakes["openfga"].access_calls == [("sarah", "acme")]
+    assert fakes["openfga"].calls == [("sarah", "acme")]
+    assert fakes["claude"].received_context_chunks is None
+
+
+@pytest.mark.asyncio
+async def test_manager_only_requires_manager_in_same_tenant():
+    manager_doc = make_document("appraisal", classification=DocumentClassification.MANAGER_ONLY)
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"appraisal"},
+        onyx_docs=[manager_doc],
+        openfga=FakeOpenFga(
+            authorized_ids={"appraisal"},
+            allowed_classifications=(
+                DocumentClassification.PUBLIC,
+                DocumentClassification.INTERNAL,
+                DocumentClassification.MANAGER_ONLY,
+            ),
+        ),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "team appraisal?")
+
+    assert result.answer == "ok"
+    assert fakes["claude"].received_context_chunks == ["chunk"]
+
+
+@pytest.mark.asyncio
+async def test_hr_only_requires_hr_admin_in_same_tenant():
+    hr_doc = make_document("salary", classification=DocumentClassification.HR_ONLY)
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"salary"},
+        onyx_docs=[hr_doc],
+        openfga=FakeOpenFga(
+            authorized_ids={"salary"},
+            allowed_classifications=(
+                DocumentClassification.PUBLIC,
+                DocumentClassification.INTERNAL,
+                DocumentClassification.MANAGER_ONLY,
+                DocumentClassification.HR_ONLY,
+            ),
+        ),
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "salary?")
+
+    assert result.answer == "ok"
+    assert fakes["claude"].received_context_chunks == ["chunk"]
 
 
 # --- happy path -------------------------------------------------------
@@ -380,7 +586,7 @@ async def test_audit_event_is_emitted_exactly_once_per_call():
 @pytest.mark.asyncio
 async def test_audit_event_emitted_even_on_unexpected_error():
     class ExplodingOnyx(FakeOnyx):
-        async def search(self, question, *, tenant_id=None):
+        async def search(self, question, *, tenant_id=None, allowed_classifications=None):
             raise RuntimeError("boom -- not a PipelineError")
 
     pipeline, fakes = build_pipeline()
@@ -402,7 +608,7 @@ async def test_onyx_dependency_failure_is_retried_then_fails_closed():
     calls = 0
 
     class FlakyOnyx(FakeOnyx):
-        async def search(self, question, *, tenant_id=None):
+        async def search(self, question, *, tenant_id=None, allowed_classifications=None):
             nonlocal calls
             calls += 1
             raise ConnectionError("onyx down")

@@ -17,9 +17,11 @@ from fastapi.testclient import TestClient
 
 from prometheus_client import CollectorRegistry
 
+from glue.admin_controls import InMemoryAdminControlStore, StaticHrAdminAuthorizer
 from glue.app import create_app
 from glue.auth import TokenVerifier, static_key_resolver
 from glue.domain import Identity, Suggestion, SuggestionStatus
+from glue.frappe_sync import SyncConfig, SyncEngine
 from glue.observability import Metrics
 from glue.pipeline import PipelineResult
 from glue.suggestions import InMemorySuggestionStore, StaticHrReviewAuthorizer
@@ -82,6 +84,58 @@ def build_review_client(store, reviewers=None, pipeline=None) -> TestClient:
             suggestion_store=store,
             review_authorizer=StaticHrReviewAuthorizer(reviewers or {"acme": ["hr-1"]}),
         )
+    )
+
+
+class FakeDocumentIndex:
+    def __init__(self, fail_next: bool = False) -> None:
+        self.documents: dict[str, dict] = {}
+        self.fail_next = fail_next
+
+    async def upsert(self, *, document_id, semantic_identifier, text, metadata):
+        if self.fail_next:
+            self.fail_next = False
+            raise ConnectionError("onyx unavailable")
+        already_existed = document_id in self.documents
+        self.documents[document_id] = {
+            "semantic_identifier": semantic_identifier,
+            "text": text,
+            "metadata": metadata,
+        }
+        return already_existed
+
+    async def delete(self, document_id):
+        self.documents.pop(document_id, None)
+
+
+class FakeTupleWriter:
+    def __init__(self) -> None:
+        self.tuples: set[tuple[str, str, str]] = set()
+
+    async def write_tuples(self, tuples):
+        self.tuples.update(tuples)
+
+    async def delete_tuples(self, tuples):
+        for tuple_ in tuples:
+            self.tuples.discard(tuple_)
+
+
+def build_admin_client(store=None, admins=None, sync_engine=None) -> tuple[TestClient, InMemoryAdminControlStore, FakeDocumentIndex]:
+    admin_store = store or InMemoryAdminControlStore()
+    index = FakeDocumentIndex()
+    engine = sync_engine or SyncEngine(index, FakeTupleWriter(), config=SyncConfig(hr_admin_user_ids=("hr-1",)))
+    return (
+        TestClient(
+            create_app(
+                FakePipeline(),
+                make_verifier(),
+                admin_store=admin_store,
+                admin_authorizer=StaticHrAdminAuthorizer(admins or {"acme": ["hr-1"]}),
+                sync_engine=engine,
+            )
+        ),
+        admin_store,
+        index,
     )
 
 
@@ -228,6 +282,136 @@ def test_review_rejects_invalid_second_transition():
 
     assert first.status_code == 200
     assert second.status_code == 409
+
+
+# --- HR admin ingestion and access controls -------------------------------
+
+
+def test_admin_controls_require_tenant_scoped_admin_authorization():
+    client, _store, _index = build_admin_client()
+    with client:
+        response = client.get(
+            "/v1/hr/admin/sources",
+            headers={"Authorization": f"Bearer {make_token(user_id='sarah')}"},
+        )
+
+    assert response.status_code == 403
+
+
+def test_admin_role_assignments_are_tenant_scoped_without_global_bypass():
+    client, _store, _index = build_admin_client()
+    with client:
+        acme_headers = {"Authorization": f"Bearer {make_token(tenant_id='acme', user_id='hr-1')}"}
+        globex_headers = {"Authorization": f"Bearer {make_token(tenant_id='globex', user_id='hr-1')}"}
+        created = client.put(
+            "/v1/hr/admin/access/roles/sarah",
+            headers=acme_headers,
+            json={"roles": ["employee", "manager"]},
+        )
+        acme_list = client.get("/v1/hr/admin/access/roles", headers=acme_headers)
+        globex_list = client.get("/v1/hr/admin/access/roles", headers=globex_headers)
+
+    assert created.status_code == 200
+    assert created.json()["tenant_id"] == "acme"
+    assert created.json()["roles"] == ["employee", "manager"]
+    assert [assignment["user_id"] for assignment in acme_list.json()] == ["sarah"]
+    assert globex_list.status_code == 403
+
+
+def test_admin_synthetic_resync_records_status_and_index_metadata_without_frappe_mutation():
+    client, store, index = build_admin_client()
+    with client:
+        response = client.post(
+            "/v1/hr/admin/sync/resync",
+            headers={"Authorization": f"Bearer {make_token(user_id='hr-1')}"},
+            json={
+                "source_id": "synthetic-fixture",
+                "records": [
+                    {
+                        "doctype": "HR Policy",
+                        "name": "POL-1",
+                        "fields": {"title": "Leave", "body": "Employees get 21 days."},
+                    }
+                ],
+            },
+        )
+        sources = client.get(
+            "/v1/hr/admin/sources",
+            headers={"Authorization": f"Bearer {make_token(user_id='hr-1')}"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["created"] == 1
+    assert body["failed"] == []
+    assert sources.json()[0]["source_id"] == "synthetic-fixture"
+    [indexed] = index.documents.values()
+    assert indexed["metadata"] == {
+        "tenant_id": "acme",
+        "record_type": "policy_document",
+        "classification": "public",
+    }
+    assert store.frappe_mutation_attempts == 0
+
+
+def test_admin_resync_failure_is_visible_and_retryable():
+    store = InMemoryAdminControlStore()
+    index = FakeDocumentIndex(fail_next=True)
+    engine = SyncEngine(index, FakeTupleWriter())
+    client, _store, _unused_index = build_admin_client(store=store, sync_engine=engine)
+    headers = {"Authorization": f"Bearer {make_token(user_id='hr-1')}"}
+    payload = {
+        "source_id": "synthetic-fixture",
+        "records": [
+            {
+                "doctype": "HR Policy",
+                "name": "POL-1",
+                "fields": {"title": "Leave", "body": "Employees get 21 days."},
+            }
+        ],
+    }
+
+    with client:
+        failed = client.post("/v1/hr/admin/sync/resync", headers=headers, json=payload)
+        retried = client.post("/v1/hr/admin/sync/resync", headers=headers, json=payload)
+        runs = client.get("/v1/hr/admin/sync/runs", headers=headers)
+
+    assert failed.status_code == 200
+    assert failed.json()["status"] == "failed"
+    assert failed.json()["failed"][0]["name"] == "POL-1"
+    assert retried.json()["status"] == "completed"
+    assert [run["status"] for run in runs.json()] == ["completed", "failed"]
+
+
+def test_admin_synthetic_revoke_removes_indexed_data_safely():
+    client, store, index = build_admin_client()
+    headers = {"Authorization": f"Bearer {make_token(user_id='hr-1')}"}
+    with client:
+        client.post(
+            "/v1/hr/admin/sync/resync",
+            headers=headers,
+            json={
+                "source_id": "synthetic-fixture",
+                "records": [
+                    {
+                        "doctype": "HR Policy",
+                        "name": "POL-1",
+                        "fields": {"title": "Leave", "body": "Employees get 21 days."},
+                    }
+                ],
+            },
+        )
+        response = client.post(
+            "/v1/hr/admin/sync/revoke",
+            headers=headers,
+            json={"source_id": "synthetic-fixture", "doctype": "HR Policy", "name": "POL-1"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["deleted"] == 1
+    assert index.documents == {}
+    assert store.frappe_mutation_attempts == 0
 
 
 # --- request ID propagation -------------------------------------------

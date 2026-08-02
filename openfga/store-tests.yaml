@@ -6,6 +6,18 @@ model_file: model.fga
 # double as the local/dev seed data loaded by scripts/provision_openfga.py.
 tuples:
   - user: user:sarah
+    relation: employee
+    object: tenant:acme
+  - user: user:david
+    relation: employee
+    object: tenant:acme
+  - user: user:morgan
+    relation: manager
+    object: tenant:acme
+  - user: user:hr_admin1
+    relation: hr_admin
+    object: tenant:acme
+  - user: user:sarah
     relation: member
     object: department:acme__engineering
   - user: user:david
@@ -45,6 +57,12 @@ tuples:
   # overlapping employee name, to prove tenant namespacing -- not relation
   # logic -- is what keeps them apart.
   - user: user:sarah
+    relation: employee
+    object: tenant:globex
+  - user: user:hr_admin1
+    relation: hr_admin
+    object: tenant:globex
+  - user: user:sarah
     relation: member
     object: department:globex__engineering
   - user: user:sarah
@@ -58,6 +76,27 @@ tuples:
     object: leave_record:globex__sarah_leave
 
 tests:
+  - name: Tenant role checks drive pre-retrieval access masks
+    check:
+      - user: user:sarah
+        object: tenant:acme
+        assertions:
+          employee: true
+          manager: false
+          hr_admin: false
+      - user: user:morgan
+        object: tenant:acme
+        assertions:
+          employee: false
+          manager: true
+          hr_admin: false
+      - user: user:hr_admin1
+        object: tenant:acme
+        assertions:
+          employee: false
+          manager: false
+          hr_admin: true
+
   - name: Sarah can see her own leave record
     check:
       - user: user:sarah

@@ -57,6 +57,20 @@ class DocumentType(str, Enum):
     POLICY_DOCUMENT = "policy_document"
 
 
+class DocumentClassification(str, Enum):
+    """Tenant-scoped retrieval clearance used before vector search.
+
+    `PUBLIC` means public inside the authenticated tenant only. It never
+    means visible across customer tenants.
+    """
+
+    PUBLIC = "public"
+    INTERNAL = "internal"
+    MANAGER_ONLY = "manager_only"
+    HR_ONLY = "hr_only"
+    SYSTEM_CONFIDENTIAL = "system_confidential"
+
+
 class Citation(BaseModel):
     """Stable pointer back to the exact source a piece of retrieved text
     came from: enough to show an employee where an answer originated, to
@@ -90,6 +104,7 @@ class Document(BaseModel):
 
     citation: Citation
     chunk: str = Field(min_length=1)
+    classification: DocumentClassification = DocumentClassification.INTERNAL
 
     @property
     def tenant_id(self) -> str:

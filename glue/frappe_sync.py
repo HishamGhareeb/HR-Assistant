@@ -40,7 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Protocol
 
-from .domain import DocumentType
+from .domain import DocumentClassification, DocumentType
 from .openfga_client import scoped_object_id
 
 logger = logging.getLogger(__name__)
@@ -86,6 +86,7 @@ class IndexedDocumentRef:
     object_type: DocumentType
     semantic_identifier: str
     text: str
+    classification: DocumentClassification
 
 
 @dataclass(frozen=True)
@@ -139,6 +140,7 @@ def _map_employee(record: FrappeRecord) -> MappingResult:
         object_type=DocumentType.EMPLOYEE_RECORD,
         semantic_identifier=f"Employee: {employee_name}",
         text=f"{employee_name} is a member of the {department} department.",
+        classification=DocumentClassification.INTERNAL,
     )
     tuples = [FgaTupleRef(user=f"user:{user_id}", relation="member", object_type="department", object_local_id=department)]
     if reports_to:
@@ -191,6 +193,7 @@ def _map_leave_application(record: FrappeRecord, config: SyncConfig) -> MappingR
         object_type=DocumentType.LEAVE_RECORD,
         semantic_identifier=f"Leave application: {record.name}",
         text=f"{leave_type} application ({record.name}) status: {status}.",
+        classification=DocumentClassification.INTERNAL,
     )
     tuples = _record_relation_tuples(record, config, "leave_record", employee_user_id, department)
     return MappingResult(document=document, tuples=tuples)
@@ -206,6 +209,7 @@ def _map_appraisal(record: FrappeRecord, config: SyncConfig) -> MappingResult:
         object_type=DocumentType.PERFORMANCE_RECORD,
         semantic_identifier=f"Performance review: {record.name}",
         text=summary,
+        classification=DocumentClassification.MANAGER_ONLY,
     )
     tuples = _record_relation_tuples(record, config, "performance_record", employee_user_id, department)
     return MappingResult(document=document, tuples=tuples)
@@ -220,6 +224,7 @@ def _map_salary_slip(record: FrappeRecord, config: SyncConfig) -> MappingResult:
         object_type=DocumentType.SALARY_RECORD,
         semantic_identifier=f"Salary slip: {record.name}",
         text=f"Salary slip for {period}.",
+        classification=DocumentClassification.HR_ONLY,
     )
     # No department tuple: salary_record has no "manager from department"
     # relation in openfga/model.fga, by design -- managers must never see
@@ -237,6 +242,7 @@ def _map_hr_policy(record: FrappeRecord) -> MappingResult:
         object_type=DocumentType.POLICY_DOCUMENT,
         semantic_identifier=f"Policy: {title}",
         text=body,
+        classification=DocumentClassification.PUBLIC,
     )
     tuples = (FgaTupleRef(user="user:*", relation="viewer", object_type="policy_document", object_local_id=record.name),)
     return MappingResult(document=document, tuples=tuples)
@@ -312,7 +318,9 @@ class InMemoryCheckpointStore:
 
 def _content_hash(document: IndexedDocumentRef | None, tuples: tuple[FgaTupleRef, ...]) -> str:
     payload = {
-        "document": None if document is None else [document.object_type.value, document.semantic_identifier, document.text],
+        "document": None
+        if document is None
+        else [document.object_type.value, document.semantic_identifier, document.text, document.classification.value],
         "tuples": sorted([t.user, t.relation, t.object_type, t.object_local_id] for t in tuples),
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
@@ -405,7 +413,11 @@ class SyncEngine:
                     document_id=document_id,
                     semantic_identifier=mapping.document.semantic_identifier,
                     text=mapping.document.text,
-                    metadata={"tenant_id": record.tenant_id, "record_type": mapping.document.object_type.value},
+                    metadata={
+                        "tenant_id": record.tenant_id,
+                        "record_type": mapping.document.object_type.value,
+                        "classification": mapping.document.classification.value,
+                    },
                 )
             elif existing is not None and existing.document_id is not None:
                 await self._document_index.delete(existing.document_id)

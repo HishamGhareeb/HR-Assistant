@@ -84,6 +84,15 @@ def salary_slip(name="SAL-1", user_id="sarah", tenant_id="acme"):
     )
 
 
+def appraisal(name="APP-1", user_id="sarah", department="engineering", tenant_id="acme"):
+    return FrappeRecord(
+        doctype="Appraisal",
+        name=name,
+        tenant_id=tenant_id,
+        fields={"employee_user_id": user_id, "department": department, "summary": "Performance review on file."},
+    )
+
+
 def hr_policy(name="POL-1", tenant_id="acme"):
     return FrappeRecord(
         doctype="HR Policy",
@@ -158,14 +167,18 @@ async def test_sync_all_creates_documents_and_tuples():
     tuples = FakeTupleWriter()
     engine = SyncEngine(index, tuples, config=SyncConfig(hr_admin_user_ids=("hr_admin1",)))
 
-    records = [employee(), leave_application(), salary_slip(), hr_policy()]
+    records = [employee(), leave_application(), appraisal(), salary_slip(), hr_policy()]
     report = await engine.sync_all("acme", records)
 
-    assert report.created == 4
+    assert report.created == 5
     assert report.updated == 0
     assert report.failed == []
-    assert len(index.documents) == 4  # employee, leave, salary, policy all index
+    assert len(index.documents) == 5  # employee, leave, appraisal, salary, policy all index
     assert scoped_object_id("leave_record", "acme", "LA-1") in {t[2] for t in tuples.tuples}
+    metadata_by_type = {doc["metadata"]["record_type"]: doc["metadata"] for doc in index.documents.values()}
+    assert metadata_by_type["policy_document"]["classification"] == "public"
+    assert metadata_by_type["performance_record"]["classification"] == "manager_only"
+    assert metadata_by_type["salary_record"]["classification"] == "hr_only"
 
 
 @pytest.mark.asyncio

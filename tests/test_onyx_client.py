@@ -12,6 +12,7 @@ import json
 import httpx
 import pytest
 
+from glue.domain import DocumentClassification
 from glue.onyx_client import OnyxAdapterError, OnyxClient
 
 
@@ -27,7 +28,13 @@ def build_client(handler, **kwargs) -> OnyxClient:
     )
 
 
-def search_doc(document_id="doc-1", record_type="leave_record", tenant_id="acme", blurb="Sarah has 5 days of leave."):
+def search_doc(
+    document_id="doc-1",
+    record_type="leave_record",
+    tenant_id="acme",
+    blurb="Sarah has 5 days of leave.",
+    classification="internal",
+):
     return {
         "document_id": document_id,
         "chunk_ind": 0,
@@ -36,7 +43,7 @@ def search_doc(document_id="doc-1", record_type="leave_record", tenant_id="acme"
         "source_type": "file",
         "boost": 0,
         "hidden": False,
-        "metadata": {"tenant_id": tenant_id, "record_type": record_type},
+        "metadata": {"tenant_id": tenant_id, "record_type": record_type, "classification": classification},
         "match_highlights": [],
         "updated_at": "2026-01-01T00:00:00Z",
     }
@@ -74,6 +81,28 @@ async def test_tenant_id_adds_document_set_filter():
     await client.search("question", tenant_id="acme")
 
     assert captured["body"]["filters"]["document_set"] == ["tenant:acme"]
+    assert captured["body"]["filters"]["metadata"]["tenant_id"] == ["acme"]
+
+
+@pytest.mark.asyncio
+async def test_allowed_classifications_are_sent_as_metadata_filter():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"documents": []})
+
+    client = build_client(handler)
+    await client.search(
+        "question",
+        tenant_id="acme",
+        allowed_classifications=[DocumentClassification.PUBLIC, DocumentClassification.INTERNAL],
+    )
+
+    assert captured["body"]["filters"]["metadata"] == {
+        "tenant_id": ["acme"],
+        "classification": ["public", "internal"],
+    }
 
 
 @pytest.mark.asyncio
@@ -112,6 +141,7 @@ async def test_maps_canonical_document_metadata():
     assert doc.tenant_id == "acme"
     assert doc.source == "onyx"
     assert doc.retrieved_at is not None
+    assert doc.classification is DocumentClassification.INTERNAL
 
 
 @pytest.mark.asyncio
@@ -149,6 +179,35 @@ async def test_drops_document_with_unknown_record_type():
 
     client = build_client(handler)
     documents = await client.search("question")
+    assert documents == []
+
+
+@pytest.mark.asyncio
+async def test_drops_document_missing_classification_metadata():
+    raw = search_doc()
+    del raw["metadata"]["classification"]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"documents": [raw]})
+
+    client = build_client(handler)
+    documents = await client.search("question", tenant_id="acme")
+    assert documents == []
+
+
+@pytest.mark.asyncio
+async def test_drops_document_outside_allowed_classification_mask():
+    raw = search_doc(classification="hr_only")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"documents": [raw]})
+
+    client = build_client(handler)
+    documents = await client.search(
+        "question",
+        tenant_id="acme",
+        allowed_classifications=[DocumentClassification.PUBLIC, DocumentClassification.INTERNAL],
+    )
     assert documents == []
 
 

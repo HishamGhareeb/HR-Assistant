@@ -35,9 +35,30 @@ see "Real Frappe integration" below for exactly what that means.
 | `Salary Slip`        | `salary_record`         | `owner`; `hr_admin` — **no** `department` tuple, matching `salary_record` having no `manager from department` relation in `openfga/model.fga` by design |
 | `HR Policy`          | `policy_document`       | `user:*` `viewer` (public within the tenant)                                        |
 
+HIS-22 adds a required `classification` metadata value to every indexed
+document. Current defaults are: employees and leave records are `internal`,
+appraisals are `manager_only`, salary slips are `hr_only`, and HR policies are
+tenant-public `public`. The pipeline resolves a tenant-scoped OpenFGA role mask
+before Onyx search, passes those allowed classifications as an explicit Onyx
+metadata filter, and still runs returned documents through the document-level
+OpenFGA viewer check before any chunk reaches the LLM.
+
 `SyncConfig.hr_admin_user_ids` is sync-run configuration, not a Frappe
 field — Frappe doesn't tag "who is HR admin" per record, so treating it as
 a synthetic field would misrepresent where that data actually comes from.
+
+## Classification metadata
+
+Every indexed document also includes `classification` metadata for the
+pre-retrieval Onyx filter:
+
+- `Employee` and `Leave Application` -> `internal`
+- `Appraisal` -> `manager_only`
+- `Salary Slip` -> `hr_only`
+- `HR Policy` -> `public`
+
+`public` is tenant-public only. It is always indexed with the same
+`tenant_id` metadata and never means cross-tenant or global visibility.
 
 A record whose doctype isn't in this table, or that's missing a field its
 doctype requires (e.g. an `Employee` with no `user_id`), raises

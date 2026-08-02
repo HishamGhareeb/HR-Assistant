@@ -51,6 +51,7 @@ import logging
 from openfga_sdk import ClientConfiguration, OpenFgaClient
 from openfga_sdk.client.models import ClientBatchCheckItem, ClientBatchCheckRequest, ClientTuple
 
+from .domain import DocumentClassification
 from .onyx_client import Document
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,10 @@ def scoped_object_id(object_type: str, tenant_id: str, object_id: str) -> str:
     concerned.
     """
     return f"{object_type}:{tenant_id}__{object_id}"
+
+
+def tenant_object_id(tenant_id: str) -> str:
+    return f"tenant:{tenant_id}"
 
 
 class OpenFgaFilter:
@@ -165,6 +170,49 @@ class OpenFgaFilter:
             for index, (_object_id, document) in enumerate(scoped)
             if str(index) in allowed_correlation_ids
         ]
+
+    async def allowed_classifications(self, user_id: str, tenant_id: str) -> tuple[DocumentClassification, ...]:
+        """Resolve the caller's tenant-scoped retrieval mask before Onyx.
+
+        A failure here denies all classes, including tenant-public. That is
+        deliberately stricter than treating `PUBLIC` as globally readable:
+        in this HRMS, public still means public inside one authenticated
+        tenant.
+        """
+        checks = [
+            ClientBatchCheckItem(
+                user=f"user:{user_id}",
+                relation=relation,
+                object=tenant_object_id(tenant_id),
+                correlation_id=relation,
+            )
+            for relation in ("employee", "manager", "hr_admin", "system_admin")
+        ]
+        try:
+            async with self._open_client() as client:
+                response = await client.batch_check(
+                    ClientBatchCheckRequest(checks=checks),
+                    options=self._batch_options,
+                )
+        except Exception:
+            logger.exception(
+                "openfga_retrieval_mask_failed user_id=%s tenant_id=%s -- denying all",
+                user_id,
+                tenant_id,
+            )
+            return ()
+
+        allowed_relations = {result.correlation_id for result in response.result if result.allowed}
+        classifications: list[DocumentClassification] = []
+        if "employee" in allowed_relations or "manager" in allowed_relations or "hr_admin" in allowed_relations:
+            classifications.extend([DocumentClassification.PUBLIC, DocumentClassification.INTERNAL])
+        if "manager" in allowed_relations or "hr_admin" in allowed_relations:
+            classifications.append(DocumentClassification.MANAGER_ONLY)
+        if "hr_admin" in allowed_relations:
+            classifications.append(DocumentClassification.HR_ONLY)
+        if "system_admin" in allowed_relations:
+            classifications.append(DocumentClassification.SYSTEM_CONFIDENTIAL)
+        return tuple(dict.fromkeys(classifications))
 
 
 class OpenFgaTupleWriter:
