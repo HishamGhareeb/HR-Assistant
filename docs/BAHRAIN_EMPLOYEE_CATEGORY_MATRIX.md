@@ -1,0 +1,48 @@
+# Bahrain employee-category support matrix
+
+Deliverable for **HIS-67**. This is the master reference for which worker
+categories the Bahrain HRMS product supports today, excludes deliberately,
+or is blocked on for sourcing reasons. **API and UI tickets must check this
+matrix before exposing general Bahrain payroll/HR calculations** — this is
+the enforcement point for the "full statutory category coverage before
+product exposure" principle that HIS-64 exists to gate.
+
+This matrix is built from citations already verified in
+`docs/BAHRAIN_PAYROLL_SOURCES.md` (SIO/LMRA/WPS) and
+`docs/BAHRAIN_EMPLOYMENT_LAW_SOURCES.md` (Labour Law entitlements). Where a
+cell says "not yet confirmed," that reflects a genuine research gap, not an
+assumption either way.
+
+---
+
+## Matrix
+
+| Category | Labour Law (36/2012) | LMRA | SIO | EOSB/Gratuity | WPS | Leave entitlements | Product status | Blocking questions | Key citations |
+|---|---|---|---|---|---|---|---|---|---|
+| **Bahraini private-sector employee** | ✅ Applies in full (Art. 29 — no discrimination in application) | ✅ Applies (LMRA regulates the labour market generally) | ⚠️ **Applies, but the specific Bahraini contribution rates/branches are not yet independently verified** — HIS-60 exists to close this gap; do not assume the 4.2%/8.4% non-Bahraini EOSB rates apply here, they don't (that scheme is explicitly non-Bahraini-only per Decision 109/2023) | ⚠️ Likely governed by the general Social Insurance Law (Decree-Law 24/1976, full text in payroll doc §2a) rather than Decision 109/2023 (which is non-Bahraini-specific) — **rate/formula not yet separately confirmed for Bahrainis**, see HIS-60 | ✅ Applies (WPS legal basis, Resolution 68/2019, does not distinguish nationality) | ✅ Full Labour Law entitlements apply (§2–§3 of employment-law doc) | **Supported now for Labour Law entitlements & WPS; blocked on SIO contribution specifics (HIS-60)** | Bahraini-specific SIO contribution rates, wage cap/floor, unemployment/work-injury split — not yet sourced | Employment-law doc §2–§3; payroll doc §2a (general Social Insurance Law) |
+| **Non-Bahraini private-sector employee** | ✅ Applies in full | ✅ Applies (this is LMRA's primary regulated population — work permits etc.) | ⚠️ **Two separate SIO regimes exist and must not be conflated**: (1) the *standard* non-Bahraini SIO contributions (work injury, possibly unemployment) — **not yet independently sourced, this is HIS-61's gap**; (2) the *EOSB-specific* contribution (4.2%/8.4%, Decision 109/2023) — fully sourced, see next column. Do not treat the EOSB rate as if it were the general SIO contribution rate. | ✅ **Fully sourced** — Decision 109/2023, full 15-article text (payroll doc §2a, §2a-ter); 4.2% (first 3 yrs) / 8.4% (thereafter) employer contribution; formula = monthly wage ÷ 2 per year (first 3 yrs), 1 month wage/year thereafter (interpretation decision logged on HIS-54); effective **1 March 2024** — see the pre/post split concern in HIS-63 | ✅ Applies | ✅ Full Labour Law entitlements apply | **EOSB supported (HIS-54, merged); standard SIO contributions blocked (HIS-61); Labour Law & WPS supported** | Standard (non-EOSB) SIO contribution rates and branches for non-Bahrainis — not yet sourced | Payroll doc §2a (Decision 109/2023); employment-law doc §2–§3 |
+| **GCC national working in Bahrain** | ⚠️ **Not independently confirmed** — Law 36/2012's text read this pass does not appear to carve out GCC nationals specially, but this was not exhaustively checked | ⚠️ Not yet independently researched | ❌ **Blocked** — the unified GCC social-insurance-protection regime is Law No. (68) of 2006; SIO's own page for it exists but states "This content will be published soon" (payroll doc §2a-bis, §5) — this is a **government publishing gap**, not a missed search | ⚠️ Decision 109/2023 Article 3 explicitly **excepts** GCC nationals covered under Law 68/2006's unified protection regime from the non-Bahraini EOSB scheme (payroll doc §2a) — so GCC nationals are *not* subject to the 4.2%/8.4% scheme, but what they *are* subject to depends on the still-unpublished Law 68/2006 | ⚠️ Not yet independently confirmed whether WPS applies uniformly regardless of nationality (likely yes, but not stated explicitly for this category) | ⚠️ Presumed same as any private-sector employee under Law 36/2012, not independently confirmed | ❌ **Blocked** — cannot safely calculate SIO obligations for this category until Law 68/2006 text is available | Law 68/2006 full text (government has not published it) | Payroll doc §2a-bis, §5, §8 |
+| **Domestic worker (or equivalent)** | ⚠️ **Not yet confirmed** whether Law 36/2012 applies fully, partially, or excludes this category — flagged as an open item in employment-law doc §6 | ✅ **Work-permit regulation fully sourced** — Order No. (4) of 2014, full 12-article text (payroll doc §2c) — defines scope (planters, security guards, babysitters, drivers, cooks working for an employer/family, not-for-profit), 9 permit-issuance conditions | ⚠️ Not yet independently confirmed whether/how SIO applies to this category | ⚠️ Not yet independently confirmed | ⚠️ Not yet independently confirmed whether WPS extends to domestic-worker payroll (household employers may not go through the same corporate WPS flow) | ⚠️ Not yet independently confirmed | ❌ **Excluded from MVP scope, pending HIS-66 research** — do not implement domestic-worker payroll/entitlement logic until Labour Law applicability, SIO, and WPS questions are resolved | Labour Law applicability; SIO/WPS applicability | Payroll doc §2c (work permit only) |
+| **Public-sector employee** | ❌ **Out of scope** — Law 36/2012 is explicitly the *Private Sector* labour law; public-sector employment is governed by separate civil-service law/pension frameworks (Law 13/1975, full text via Arabic PDF in payroll doc §2a) | ❌ Out of scope — LMRA regulates the private labour market | ❌ Out of scope for this product's current SIO logic — Law 13/1975 governs public-sector pensions separately, and it's already noted in the payroll doc that this should not be mixed into private-sector payroll logic | ❌ Out of scope — Decision 109/2023 is explicitly private-sector | N/A | ❌ Out of scope | **Explicitly out of scope — do not mix public-sector pension law into private-sector payroll logic** (per this ticket's own instruction) | None — this is a scope decision, not a research gap | Payroll doc §2a (Law 13/1975) |
+| **Self-employed / employer / partner (optional SIO categories)** | ❌ Not an "employee" under Law 36/2012's Art. 1 definition (worker = employed for a wage under an employer's management) — likely out of scope by definition | N/A | ⚠️ **Not yet independently confirmed** whether SIO offers optional/voluntary coverage for this category | ⚠️ Not applicable in the standard sense (no employer to fund EOSB) | N/A | N/A | ❌ **Not yet classified — treat as future/blocked scope**, not supported in MVP | Whether SIO has an optional-insurance category and what it covers | Not yet sourced |
+| **Flexible worker / Flexi Permit category** | ⚠️ Not independently confirmed | ❌ **Unresolved** — "عامل مرن" (flexible worker) confirmed as a real LMRA permit category via a 2017 residency-correction resolution reference, but the scheme's **founding regulation was not located** after checking three LMRA legal-library categories (payroll doc §2a-ter, closed as Unresolved per explicit instruction) | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ❌ **Blocked/Unresolved — explicitly excluded from Gate scope per HIS-58** | No founding source located for the scheme itself | Payroll doc §2a-ter, §4, §5, §8 |
+| **Temporary / part-time / casual worker** | ⚠️ Not independently confirmed whether Law 36/2012 distinguishes these from standard "worker" status — Art. 38 mentions hourly/daily/weekly/monthly/piece-rate wage calculation methods, which implies some flexibility, but no distinct legal category was found this pass | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ⚠️ Not independently confirmed | ❌ **Not yet classified** | Whether Bahraini law treats these as a distinct category or just a wage-calculation-method variant of standard employment | Employment-law doc §5 (Art. 38 only) |
+| **Remote/outside-Bahrain worker employed by a Bahrain entity** | ⚠️ Not researched this pass | ⚠️ Not researched this pass | ⚠️ Not researched this pass | ⚠️ Not researched this pass | ⚠️ Not researched this pass | ⚠️ Not researched this pass | ❌ **Not yet researched — treat as blocked/future scope** | Whether any official source addresses this at all | None yet |
+
+---
+
+## Product-safety default for unclassified/blocked categories
+
+Per the product-invariant principle (also documented in
+`BAHRAIN_RULE_ENGINE_READINESS.md` §3): **if an employee's category maps to
+a ❌ Blocked/Unresolved/Out-of-scope cell above, the system must return "not
+supported / needs HR review," never a guessed or extrapolated calculation.**
+Category must be determined *before* any payroll or entitlement calculation
+is attempted — this matrix is the lookup table that determination should be
+checked against.
+
+## Legend
+
+- ✅ Supported / fully sourced — safe to build against with existing citations.
+- ⚠️ Partially sourced / not yet independently confirmed — do not treat as ready; needs a dedicated research pass.
+- ❌ Excluded / Blocked / Unresolved / Out of scope — do not implement; the reason (missing source, deliberate scope decision, or upstream ticket dependency) is stated in the "Blocking questions" column.
