@@ -46,3 +46,10 @@ This is intentional. Payroll and labor-law calculations affect money,
 compliance, and liability, so source drift must fail in CI rather than rely on
 review memory.
 
+## Explicit exclusions
+
+Before adding country-law edge cases, check
+`docs/BAHRAIN_RULE_PACK_SCOPE.md`. Flexi Permit / flexible-worker logic and Law
+No. (68) of 2006 GCC social-insurance-protection logic are deliberately excluded
+from the current Bahrain rule-pack gate until official full-text sources are
+available.
