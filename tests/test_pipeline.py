@@ -15,6 +15,7 @@ from prometheus_client import CollectorRegistry
 
 from glue.audit import AuditLogger, InMemoryAuditSink
 from glue.domain import DocumentClassification, Identity
+from glue.feedback import InMemoryFeedbackStore
 from glue.observability import Metrics
 from glue.onyx_client import Document
 from glue.openfga_client import OpenFgaFilter
@@ -162,6 +163,7 @@ def build_pipeline(
     raw_claude_response=None,
     guard_valid=True,
     guard_sanitized=None,
+    feedback_store=None,
 ):
     docs = onyx_docs if onyx_docs is not None else [make_document("sarah_leave"), make_document("david_leave")]
     audit_sink = InMemoryAuditSink()
@@ -179,6 +181,7 @@ def build_pipeline(
         audit_logger=AuditLogger(audit_sink, privacy_key=PRIVACY_KEY),
         metrics=Metrics(CollectorRegistry()),
         retry_policy=FAST_RETRY_POLICY,
+        feedback_store=feedback_store,
     )
     return pipeline, {"onyx": onyx, "openfga": fga, "claude": claude, "guard": guard, "tracer": tracer, "audit": audit_sink}
 
@@ -653,3 +656,85 @@ async def test_claude_and_guard_run_off_the_event_loop_thread():
     assert fakes["claude"].thread_id != event_loop_thread
     assert fakes["guard"].thread_id is not None
     assert fakes["guard"].thread_id != event_loop_thread
+
+
+# --- request_id/model_outcome on PipelineResult, and unanswered auto-log ---
+
+
+@pytest.mark.asyncio
+async def test_result_carries_request_id_and_answered_outcome():
+    pipeline, fakes = build_pipeline(authorized_ids={"sarah_leave"})
+
+    result = await pipeline.handle_question(IDENTITY, "How much leave do I have?")
+
+    assert result.request_id
+    assert result.request_id == fakes["audit"].events[0].request_id
+    assert result.model_outcome == "answered"
+
+
+@pytest.mark.asyncio
+async def test_unanswered_question_is_recorded_when_no_info():
+    store = InMemoryFeedbackStore()
+    pipeline, fakes = build_pipeline(authorized_ids=set(), feedback_store=store)
+
+    result = await pipeline.handle_question(IDENTITY, "Do we offer sabbaticals?")
+
+    assert result.model_outcome == "no_info"
+    recorded = store.list_unanswered(tenant_id="acme")
+    assert len(recorded) == 1
+    assert recorded[0].question == "Do we offer sabbaticals?"
+    assert recorded[0].model_outcome == "no_info"
+    assert recorded[0].request_id == result.request_id
+
+
+@pytest.mark.asyncio
+async def test_unanswered_question_is_recorded_when_blocked():
+    store = InMemoryFeedbackStore()
+    pipeline, fakes = build_pipeline(
+        authorized_ids={"sarah_leave"},
+        raw_claude_response=json.dumps({"answer": "leaked SSN: 123-45-6789", "suggestions": []}),
+        guard_valid=False,
+        feedback_store=store,
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "How much leave do I have?")
+
+    assert result.model_outcome == "blocked"
+    recorded = store.list_unanswered(tenant_id="acme")
+    assert len(recorded) == 1
+    assert recorded[0].model_outcome == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_unanswered_question_is_recorded_when_error():
+    store = InMemoryFeedbackStore()
+    pipeline, fakes = build_pipeline(
+        openfga_error=ConnectionError("openfga unreachable"), feedback_store=store
+    )
+
+    result = await pipeline.handle_question(IDENTITY, "How much leave do I have?")
+
+    assert result.model_outcome == "error"
+    recorded = store.list_unanswered(tenant_id="acme")
+    assert len(recorded) == 1
+    assert recorded[0].model_outcome == "error"
+
+
+@pytest.mark.asyncio
+async def test_answered_question_is_not_recorded_as_unanswered():
+    store = InMemoryFeedbackStore()
+    pipeline, fakes = build_pipeline(authorized_ids={"sarah_leave"}, feedback_store=store)
+
+    result = await pipeline.handle_question(IDENTITY, "How much leave do I have?")
+
+    assert result.model_outcome == "answered"
+    assert store.list_unanswered(tenant_id="acme") == []
+
+
+@pytest.mark.asyncio
+async def test_pipeline_without_feedback_store_still_returns_result():
+    pipeline, fakes = build_pipeline(authorized_ids=set())  # feedback_store=None, the default
+
+    result = await pipeline.handle_question(IDENTITY, "Do we offer sabbaticals?")
+
+    assert result.model_outcome == "no_info"

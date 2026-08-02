@@ -69,7 +69,13 @@ class FakePipeline:
 
     async def handle_question(self, identity: Identity, question: str) -> PipelineResult:
         self.calls.append((identity, question))
-        return PipelineResult(answer=f"{identity.tenant_id}/{identity.user_id}: {question}", suggestions=[], blocked=False)
+        return PipelineResult(
+            answer=f"{identity.tenant_id}/{identity.user_id}: {question}",
+            suggestions=[],
+            blocked=False,
+            request_id="test-request-id",
+            model_outcome="answered",
+        )
 
 
 def build_client(pipeline=None, verifier=None) -> TestClient:
@@ -225,7 +231,12 @@ def test_valid_token_reaches_pipeline_with_verified_identity():
         )
 
     assert response.status_code == 200
-    assert response.json() == {"answer": "acme/sarah: My leave balance?", "suggestions": [], "blocked": False}
+    assert response.json() == {
+        "answer": "acme/sarah: My leave balance?",
+        "suggestions": [],
+        "blocked": False,
+        "request_id": "test-request-id",
+    }
     assert len(pipeline.calls) == 1
     identity, question = pipeline.calls[0]
     assert identity == Identity(tenant_id="acme", user_id="sarah")
