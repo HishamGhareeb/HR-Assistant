@@ -23,6 +23,29 @@ from .admin_controls import (
 )
 from .audit import AuditLogger, HashChainedJsonlAuditSink
 from .auth import TokenVerifier, build_identity_dependency, jwks_key_resolver, static_key_resolver
+from .bahrain_payroll_api import (
+    EosbEligibilityRequest,
+    EosbEligibilityResponse,
+    EosbEmployerPenaltyRequest,
+    EosbEmployerPenaltyResponse,
+    EosbGratuityRequest,
+    EosbGratuityResponse,
+    EosbMonthlyContributionRequest,
+    EosbMonthlyContributionResponse,
+    SioContributionRequest,
+    SioContributionResponse,
+    SioWageUpdateSubmissionIn,
+    SioWageUpdateValidationResponse,
+    WpsSalaryFileIn,
+    WpsValidationResponse,
+    calculate_eosb_employer_penalty_request,
+    calculate_eosb_gratuity_request,
+    calculate_eosb_monthly_contribution_request,
+    calculate_sio_contribution_request,
+    evaluate_eosb_eligibility_request,
+    validate_sio_wage_update_request,
+    validate_wps_salary_file_request,
+)
 from .claude_client import ClaudeClient
 from .config import Config
 from .domain import Identity, Suggestion, SuggestionStatus
@@ -614,6 +637,107 @@ def create_app(
                     detail="role assignment saved but authorization sync failed; retry required",
                 ) from exc
         return AdminRoleAssignmentResponse.from_assignment(assignment)
+
+    # --- Bahrain payroll rule-pack endpoints (HIS-59) -----------------------
+    #
+    # Gated behind the same HR-admin authorization as the other
+    # /v1/hr/admin/* endpoints above: payroll figures are sensitive HR/
+    # finance data, not general-purpose Q&A. Every response includes
+    # citation/explanation metadata (see glue/bahrain_payroll_api.py) per
+    # HIS-59's acceptance criteria. A caller-input ValueError (negative
+    # wage, termination before hire, etc.) maps to 422; an unregistered
+    # statutory rate is never raised as an error -- it comes back as a
+    # `supported: false` result with an explicit HR-review reason.
+
+    def _reraise_as_validation_error(exc: ValueError) -> HTTPException:
+        return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+
+    @app.post("/v1/hr/payroll/bahrain/wps/validate", response_model=WpsValidationResponse)
+    async def validate_bahrain_wps_salary_file(
+        body: WpsSalaryFileIn,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> WpsValidationResponse:
+        authorize_hr_admin(identity, authorizer)
+        return validate_wps_salary_file_request(body)
+
+    @app.post(
+        "/v1/hr/payroll/bahrain/sio-wage-update/validate",
+        response_model=SioWageUpdateValidationResponse,
+    )
+    async def validate_bahrain_sio_wage_update(
+        body: SioWageUpdateSubmissionIn,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> SioWageUpdateValidationResponse:
+        authorize_hr_admin(identity, authorizer)
+        return validate_sio_wage_update_request(body)
+
+    @app.post("/v1/hr/payroll/bahrain/eosb/eligibility", response_model=EosbEligibilityResponse)
+    async def evaluate_bahrain_eosb_eligibility(
+        body: EosbEligibilityRequest,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> EosbEligibilityResponse:
+        authorize_hr_admin(identity, authorizer)
+        return evaluate_eosb_eligibility_request(body)
+
+    @app.post("/v1/hr/payroll/bahrain/eosb/gratuity", response_model=EosbGratuityResponse)
+    async def calculate_bahrain_eosb_gratuity(
+        body: EosbGratuityRequest,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> EosbGratuityResponse:
+        authorize_hr_admin(identity, authorizer)
+        try:
+            return calculate_eosb_gratuity_request(body)
+        except ValueError as exc:
+            raise _reraise_as_validation_error(exc) from exc
+
+    @app.post(
+        "/v1/hr/payroll/bahrain/eosb/monthly-contribution",
+        response_model=EosbMonthlyContributionResponse,
+    )
+    async def calculate_bahrain_eosb_monthly_contribution(
+        body: EosbMonthlyContributionRequest,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> EosbMonthlyContributionResponse:
+        authorize_hr_admin(identity, authorizer)
+        try:
+            return calculate_eosb_monthly_contribution_request(body)
+        except ValueError as exc:
+            raise _reraise_as_validation_error(exc) from exc
+
+    @app.post(
+        "/v1/hr/payroll/bahrain/eosb/employer-penalty",
+        response_model=EosbEmployerPenaltyResponse,
+    )
+    async def calculate_bahrain_eosb_employer_penalty(
+        body: EosbEmployerPenaltyRequest,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> EosbEmployerPenaltyResponse:
+        authorize_hr_admin(identity, authorizer)
+        try:
+            return calculate_eosb_employer_penalty_request(body)
+        except ValueError as exc:
+            raise _reraise_as_validation_error(exc) from exc
+
+    @app.post(
+        "/v1/hr/payroll/bahrain/sio-contributions/calculate",
+        response_model=SioContributionResponse,
+    )
+    async def calculate_bahrain_sio_contribution(
+        body: SioContributionRequest,
+        identity: Identity = Depends(get_identity),
+        authorizer: HrAdminAuthorizer = Depends(get_admin_authorizer),
+    ) -> SioContributionResponse:
+        authorize_hr_admin(identity, authorizer)
+        try:
+            return calculate_sio_contribution_request(body)
+        except ValueError as exc:
+            raise _reraise_as_validation_error(exc) from exc
 
     return app
 
