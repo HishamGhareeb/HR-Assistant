@@ -103,3 +103,20 @@ Article 116 is likewise a direct quote already sourced in
 `BAHRAIN_EMPLOYMENT_LAW_SOURCES.md` §5. The two inferences flagged in §2
 and §3 are explicitly marked as inferences, not verified figures — they
 must not be hardcoded into a rule pack without further confirmation.
+
+---
+
+## 5. Implementation status (HIS-71)
+
+This research is now wired into executable code:
+`glue/bahrain_payroll/rules/eosb_transition.py`. The §3 inference (3-year
+first tier applied independently to each period's own duration) is carried
+into the code as an explicitly documented assumption in
+`calculate_eosb_gratuity_with_pre_post_split`'s docstring — easy to revise
+in one place if a human/payroll reviewer determines a different convention.
+The gratuity amount is reported as two separate figures
+(`pre_march_2024_employer_direct_liability` and
+`post_march_2024_sio_funded_amount`), never merged silently, per this
+document's own §1 warning against treating the split as one continuous
+accrual. Article 13's contribution-rate transition is implemented in
+`eosb_monthly_contribution_rate_percent_with_article_13_transition`.

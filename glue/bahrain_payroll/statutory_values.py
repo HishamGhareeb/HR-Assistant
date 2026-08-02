@@ -347,3 +347,81 @@ BAHRAIN_UNEMPLOYMENT_LAW_EFFECTIVE_DATE = StatutoryValue(
         "practice, since it is decades in the past."
     ),
 )
+
+# --- EOSB pre/post-1-March-2024 liability split (Decision 109/2023 -------
+# --- Articles 13-14, HIS-63/HIS-71) ---------------------------------------
+#
+# Article 14 requires pre-2024-03-01 service to be governed by Law 36/2012
+# Article 116 (a direct employer liability under the Labour Law) rather than
+# the SIO-funded scheme. Article 116 uses the identical formula *shape* as
+# Decision 109/2023 Article 9 ("half a month's wage for each of the first
+# three years... one month's wage for each of the subsequent years"), so the
+# following constants mirror EOSB_FIRST_TIER_YEARS / EOSB_HALF_MONTH_DIVISOR
+# / EOSB_SUBSEQUENT_TIER_MONTHS_PER_YEAR numerically, but are kept as
+# separate StatutoryValue entries citing their own legal basis (Article 116,
+# not Article 9) for audit clarity -- the two provisions could diverge in a
+# future amendment even though they agree today.
+
+LEGACY_GRATUITY_FIRST_TIER_YEARS = StatutoryValue(
+    name="legacy_gratuity_first_tier_years",
+    value=3,
+    unit="years",
+    citation=StatutoryCitation(
+        section="§5",
+        instrument="Law No. 36 of 2012",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_EMPLOYMENT_LAW_SOURCES.md",
+        quote="half a month's wage per year for the first 3 years, one month's wage per year thereafter",
+    ),
+)
+
+LEGACY_GRATUITY_HALF_MONTH_DIVISOR = StatutoryValue(
+    name="legacy_gratuity_half_month_divisor",
+    value=2,
+    unit="monthly-wage divisor",
+    citation=StatutoryCitation(
+        section="§5",
+        instrument="Law No. 36 of 2012",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_EMPLOYMENT_LAW_SOURCES.md",
+        quote="half a month's wage per year for the first 3 years, one month's wage per year thereafter",
+    ),
+    note=(
+        "Reuses the same wage-division interpretation decided for Article 9 on "
+        "HIS-54 (half a month means monthly wage ÷ 2, not daily wage × 15), "
+        "applied here by analogy to Article 116's identical wording -- not "
+        "independently re-confirmed for Article 116 specifically."
+    ),
+)
+
+LEGACY_GRATUITY_SUBSEQUENT_TIER_MONTHS_PER_YEAR = StatutoryValue(
+    name="legacy_gratuity_subsequent_tier_months_per_year",
+    value=1,
+    unit="monthly wages per year",
+    citation=StatutoryCitation(
+        section="§5",
+        instrument="Law No. 36 of 2012",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_EMPLOYMENT_LAW_SOURCES.md",
+        quote="half a month's wage per year for the first 3 years, one month's wage per year thereafter",
+    ),
+)
+
+EOSB_ARTICLE_13_PRE_TRANSITION_SERVICE_YEARS_THRESHOLD = StatutoryValue(
+    name="eosb_article_13_pre_transition_service_years_threshold",
+    value=3,
+    unit="years",
+    citation=StatutoryCitation(
+        section="§2",
+        instrument="Decision No. (109) of 2023",
+        retrieved="2026-08-02",
+        source_doc="docs/BAHRAIN_EOSB_PRE_POST_2024_SPLIT.md",
+        quote="exceeding three years before the entry into force of the provisions of this Regulation",
+    ),
+    note=(
+        "Employees with more than this many years of pre-2024-03-01 service "
+        "skip straight to the subsequent-tier (8.4%) monthly contribution rate "
+        "from day one of the scheme, per Article 13. This is a distinct legal "
+        "threshold from EOSB_FIRST_TIER_YEARS even though the number matches."
+    ),
+)
