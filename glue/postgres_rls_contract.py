@@ -10,12 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "db"
-    / "migrations"
-    / "0001_tenant_rls_foundation.sql"
-)
+MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "db" / "migrations"
 
 TENANT_SCOPED_TABLES = (
     "tenant_users",
@@ -24,8 +19,12 @@ TENANT_SCOPED_TABLES = (
     "suggestion_decisions",
     "integration_sync_runs",
     "integration_source_statuses",
+    "sync_checkpoints",
 )
 
 
 def load_tenant_rls_migration() -> str:
-    return MIGRATION_PATH.read_text(encoding="utf-8")
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(MIGRATIONS_DIR.glob("*.sql"))
+    )

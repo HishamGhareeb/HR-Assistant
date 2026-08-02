@@ -54,6 +54,19 @@ def test_admin_sync_tables_preserve_tenant_composite_keys() -> None:
     assert "foreign key (tenant_id, last_run_id) references ral_hr.integration_sync_runs (tenant_id, run_id)" in sql
 
 
+def test_sync_checkpoint_table_preserves_tenant_composite_key_and_payload() -> None:
+    sql = normalized_sql()
+
+    assert "create table ral_hr.sync_checkpoints" in sql
+    assert "primary key (tenant_id, doctype, name)" in sql
+    assert "content_hash text not null" in sql
+    assert "document_id text" in sql
+    assert "tuples_json jsonb not null default '[]'::jsonb" in sql
+    assert "payload_json jsonb not null" in sql
+    assert "idx_sync_checkpoints_tenant_doctype" in sql
+    assert "idx_sync_checkpoints_tenant_updated" in sql
+
+
 def test_tenant_table_has_no_direct_tenant_scoped_access_policy() -> None:
     sql = normalized_sql()
 
