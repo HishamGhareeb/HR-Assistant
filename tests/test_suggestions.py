@@ -11,6 +11,7 @@ from glue.suggestions import (
     SuggestionNotFoundError,
     SuggestionTransitionError,
 )
+from glue.sqlite_suggestions import SqliteSuggestionStore
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -116,3 +117,81 @@ def test_jsonl_store_persists_suggestions_and_history(tmp_path):
     assert restored.suggestion.status is SuggestionStatus.REJECTED
     assert len(restored.decision_history) == 1
     assert restored.decision_history[0].note == "Not actionable."
+
+
+def test_sqlite_store_persists_suggestions_and_history(tmp_path):
+    path = tmp_path / "suggestions.sqlite3"
+    store = SqliteSuggestionStore(path)
+    store.create(make_suggestion())
+    store.decide(
+        identity=Identity(tenant_id="acme", user_id="hr-1"),
+        suggestion_id="sug-1",
+        action=SuggestionStatus.APPROVED,
+        note="Approved for follow-up.",
+    )
+
+    restored = SqliteSuggestionStore(path).get(tenant_id="acme", suggestion_id="sug-1")
+
+    assert restored.suggestion.status is SuggestionStatus.APPROVED
+    assert restored.suggestion.decided_by == "hr-1"
+    assert len(restored.decision_history) == 1
+    assert restored.decision_history[0].note == "Approved for follow-up."
+
+
+def test_sqlite_store_keeps_same_suggestion_id_tenant_isolated(tmp_path):
+    store = SqliteSuggestionStore(tmp_path / "suggestions.sqlite3")
+    store.create(make_suggestion("acme", "shared-id"))
+    store.create(make_suggestion("globex", "shared-id"))
+
+    store.decide(
+        identity=Identity(tenant_id="acme", user_id="hr-1"),
+        suggestion_id="shared-id",
+        action=SuggestionStatus.DISMISSED,
+    )
+
+    acme = store.get(tenant_id="acme", suggestion_id="shared-id")
+    globex = store.get(tenant_id="globex", suggestion_id="shared-id")
+
+    assert acme.suggestion.status is SuggestionStatus.DISMISSED
+    assert globex.suggestion.status is SuggestionStatus.PENDING
+
+
+def test_sqlite_store_rejects_different_second_decision_after_restart(tmp_path):
+    path = tmp_path / "suggestions.sqlite3"
+    store = SqliteSuggestionStore(path)
+    store.create(make_suggestion())
+    store.decide(
+        identity=Identity(tenant_id="acme", user_id="hr-1"),
+        suggestion_id="sug-1",
+        action=SuggestionStatus.REJECTED,
+    )
+
+    restored = SqliteSuggestionStore(path)
+
+    with pytest.raises(SuggestionTransitionError):
+        restored.decide(
+            identity=Identity(tenant_id="acme", user_id="hr-1"),
+            suggestion_id="sug-1",
+            action=SuggestionStatus.APPROVED,
+        )
+
+
+def test_sqlite_store_lists_only_requested_status_inside_tenant(tmp_path):
+    store = SqliteSuggestionStore(tmp_path / "suggestions.sqlite3")
+    store.create(make_suggestion("acme", "pending"))
+    store.create(make_suggestion("acme", "approved"))
+    store.create(make_suggestion("globex", "approved"))
+    store.decide(
+        identity=Identity(tenant_id="acme", user_id="hr-1"),
+        suggestion_id="approved",
+        action=SuggestionStatus.APPROVED,
+    )
+    store.decide(
+        identity=Identity(tenant_id="globex", user_id="hr-2"),
+        suggestion_id="approved",
+        action=SuggestionStatus.APPROVED,
+    )
+
+    visible = store.list(tenant_id="acme", status=SuggestionStatus.APPROVED)
+
+    assert [record.suggestion.suggestion_id for record in visible] == ["approved"]
