@@ -16,6 +16,8 @@ from typing import Iterable, Sequence
 
 SOURCE_DOC_TEXT = "docs/BAHRAIN_PAYROLL_SOURCES.md"
 SOURCE_DOC = Path(SOURCE_DOC_TEXT)
+SOURCE_DOC_PREFIX = "docs/BAHRAIN"
+SOURCE_DOC_SUFFIX = ".md"
 STATUTORY_VALUE_CLASS = "StatutoryValue"
 STATUTORY_CITATION_CLASS = "StatutoryCitation"
 NON_STATUTORY_MARKER = "NON_STATUTORY_NUMBER:"
@@ -78,8 +80,7 @@ def validate_rule_pack_citations(
     """Validate Bahrain payroll code against the official-source inventory."""
 
     repo_root = repo_root.resolve()
-    source_doc = (source_doc or repo_root / SOURCE_DOC).resolve()
-    source_text = source_doc.read_text(encoding="utf-8")
+    source_text_by_doc = _load_source_docs(repo_root, source_doc)
     scanned_paths = paths or default_rule_pack_paths(repo_root)
 
     violations: list[CitationGuardViolation] = []
@@ -87,8 +88,24 @@ def validate_rule_pack_citations(
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         source_lines = path.read_text(encoding="utf-8").splitlines()
         violations.extend(_find_uncited_numeric_literals(path, tree, source_lines))
-        violations.extend(_validate_statutory_value_calls(path, tree, source_text))
+        violations.extend(_validate_statutory_value_calls(path, tree, source_text_by_doc))
     return violations
+
+
+def _load_source_docs(
+    repo_root: Path,
+    source_doc: Path | None = None,
+) -> dict[str, str]:
+    if source_doc is not None:
+        return {SOURCE_DOC_TEXT: source_doc.resolve().read_text(encoding="utf-8")}
+
+    docs_dir = repo_root / "docs"
+    if not docs_dir.exists():
+        return {}
+    return {
+        doc.relative_to(repo_root).as_posix(): doc.read_text(encoding="utf-8")
+        for doc in sorted(docs_dir.glob("BAHRAIN*.md"))
+    }
 
 
 def _iter_python_files(paths: Iterable[Path]) -> Iterable[Path]:
@@ -132,7 +149,7 @@ def _find_uncited_numeric_literals(
 def _validate_statutory_value_calls(
     path: Path,
     tree: ast.AST,
-    source_text: str,
+    source_text_by_doc: dict[str, str],
 ) -> list[CitationGuardViolation]:
     violations: list[CitationGuardViolation] = []
     for node in ast.walk(tree):
@@ -148,14 +165,14 @@ def _validate_statutory_value_calls(
                 )
             )
             continue
-        violations.extend(_validate_citation_call(path, citation_node, source_text))
+        violations.extend(_validate_citation_call(path, citation_node, source_text_by_doc))
     return violations
 
 
 def _validate_citation_call(
     path: Path,
     node: ast.Call,
-    source_text: str,
+    source_text_by_doc: dict[str, str],
 ) -> list[CitationGuardViolation]:
     values = {
         name: _literal_string(_keyword_value(node, name))
@@ -165,14 +182,32 @@ def _validate_citation_call(
     violations: list[CitationGuardViolation] = []
 
     source_doc = values["source_doc"] or SOURCE_DOC_TEXT
-    if source_doc != SOURCE_DOC_TEXT:
+    if not (
+        source_doc.startswith(SOURCE_DOC_PREFIX)
+        and source_doc.endswith(SOURCE_DOC_SUFFIX)
+    ):
         violations.append(
             CitationGuardViolation(
                 path=path,
                 line=line,
-                message=f"citation source_doc must be {SOURCE_DOC_TEXT}, got {source_doc!r}",
+                message=(
+                    "citation source_doc must point to a Bahrain source "
+                    f"document under docs/, got {source_doc!r}"
+                ),
             )
         )
+        return violations
+
+    source_text = source_text_by_doc.get(source_doc)
+    if source_text is None:
+        violations.append(
+            CitationGuardViolation(
+                path=path,
+                line=line,
+                message=f"citation source_doc {source_doc!r} was not found",
+            )
+        )
+        return violations
 
     for field in ("section", "instrument", "retrieved"):
         if not values[field]:

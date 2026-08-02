@@ -143,6 +143,18 @@ EOSB_EFFECTIVE_DATE_CITATION = StatutoryCitation(
     quote="1 March 2024",
 )
 
+EOSB_EFFECTIVE_DATE = StatutoryValue(
+    name="eosb_effective_date",
+    value="2024-03-01",
+    unit="date",
+    citation=StatutoryCitation(
+        section="§2a",
+        instrument="Decision No. (109) of 2023",
+        retrieved="2026-08-02",
+        quote="1 March 2024",
+    ),
+)
+
 EOSB_SCOPE_CITATION = StatutoryCitation(
     section="§2a",
     instrument="Decision No. (109) of 2023",
