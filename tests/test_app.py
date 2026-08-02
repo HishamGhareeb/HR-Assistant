@@ -120,7 +120,24 @@ class FakeTupleWriter:
             self.tuples.discard(tuple_)
 
 
-def build_admin_client(store=None, admins=None, sync_engine=None) -> tuple[TestClient, InMemoryAdminControlStore, FakeDocumentIndex]:
+class FakeTenantRoleSyncer:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.calls: list[tuple[str, object]] = []
+
+    async def sync_tenant_roles(self, *, tenant_id: str, store):
+        self.calls.append((tenant_id, store))
+        if self.fail:
+            raise ConnectionError("openfga unavailable")
+        return {"tenant_id": tenant_id, "written": 1, "deleted": 0}
+
+
+def build_admin_client(
+    store=None,
+    admins=None,
+    sync_engine=None,
+    tenant_role_syncer=None,
+) -> tuple[TestClient, InMemoryAdminControlStore, FakeDocumentIndex]:
     admin_store = store or InMemoryAdminControlStore()
     index = FakeDocumentIndex()
     engine = sync_engine or SyncEngine(index, FakeTupleWriter(), config=SyncConfig(hr_admin_user_ids=("hr-1",)))
@@ -132,6 +149,7 @@ def build_admin_client(store=None, admins=None, sync_engine=None) -> tuple[TestC
                 admin_store=admin_store,
                 admin_authorizer=StaticHrAdminAuthorizer(admins or {"acme": ["hr-1"]}),
                 sync_engine=engine,
+                tenant_role_syncer=tenant_role_syncer,
             )
         ),
         admin_store,
@@ -316,6 +334,36 @@ def test_admin_role_assignments_are_tenant_scoped_without_global_bypass():
     assert created.json()["roles"] == ["employee", "manager"]
     assert [assignment["user_id"] for assignment in acme_list.json()] == ["sarah"]
     assert globex_list.status_code == 403
+
+
+def test_admin_role_assignment_triggers_optional_tenant_role_sync():
+    syncer = FakeTenantRoleSyncer()
+    client, store, _index = build_admin_client(tenant_role_syncer=syncer)
+
+    with client:
+        response = client.put(
+            "/v1/hr/admin/access/roles/sarah",
+            headers={"Authorization": f"Bearer {make_token(tenant_id='acme', user_id='hr-1')}"},
+            json={"roles": ["employee", "manager"]},
+        )
+
+    assert response.status_code == 200
+    assert syncer.calls == [("acme", store)]
+
+
+def test_admin_role_assignment_surfaces_retryable_sync_failure():
+    syncer = FakeTenantRoleSyncer(fail=True)
+    client, _store, _index = build_admin_client(tenant_role_syncer=syncer)
+
+    with client:
+        response = client.put(
+            "/v1/hr/admin/access/roles/sarah",
+            headers={"Authorization": f"Bearer {make_token(tenant_id='acme', user_id='hr-1')}"},
+            json={"roles": ["employee"]},
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "role assignment saved but authorization sync failed; retry required"
 
 
 def test_admin_synthetic_resync_records_status_and_index_metadata_without_frappe_mutation():

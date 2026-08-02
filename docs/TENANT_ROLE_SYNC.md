@@ -52,6 +52,16 @@ The sync function accepts a role-assignment store protocol and tuple-writer prot
 - test fakes;
 - the real OpenFGA tuple writer.
 
+`glue.app.create_app(..., tenant_role_syncer=...)` can inject this sync path into the HR admin role-assignment API.
+
+When configured:
+
+1. the role assignment is persisted through `AdminControlStore`;
+2. the tenant role syncer is called for the authenticated tenant;
+3. if the sync fails, the API returns a retryable `503`.
+
+When no syncer is configured, the route preserves local/test behavior and only stores the assignment. Production deployments should configure a syncer so role changes update OpenFGA promptly.
+
 ## Future work
 
-The next production step is to trigger this sync from durable tenant provisioning and Frappe role changes. The trigger must be idempotent, retryable, and audited.
+The next production step is to trigger this sync from durable tenant provisioning and Frappe role changes. The trigger must be idempotent, retryable, and audited, including a background reconciliation job for failed syncs.

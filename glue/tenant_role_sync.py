@@ -23,6 +23,15 @@ class TupleWriter(Protocol):
     async def delete_tuples(self, tuples: list[tuple[str, str, str]]) -> None: ...
 
 
+class TenantRoleSyncer(Protocol):
+    async def sync_tenant_roles(
+        self,
+        *,
+        tenant_id: str,
+        store: TenantRoleAssignmentStore,
+    ) -> "TenantRoleSyncResult": ...
+
+
 OPENFGA_TENANT_ROLE_RELATIONS: dict[TenantRole, str] = {
     TenantRole.EMPLOYEE: "employee",
     TenantRole.MANAGER: "manager",
@@ -51,6 +60,32 @@ class TenantRoleSyncResult:
     tenant_id: str
     written: int
     deleted: int
+
+
+class OpenFgaTenantRoleSyncer:
+    """Sync tenant role assignments using an OpenFGA tuple writer."""
+
+    def __init__(
+        self,
+        tuple_writer: TupleWriter,
+        *,
+        existing_tuples: set[tuple[str, str, str]] | None = None,
+    ) -> None:
+        self._tuple_writer = tuple_writer
+        self._existing_tuples = existing_tuples
+
+    async def sync_tenant_roles(
+        self,
+        *,
+        tenant_id: str,
+        store: TenantRoleAssignmentStore,
+    ) -> TenantRoleSyncResult:
+        return await sync_tenant_roles(
+            tenant_id=tenant_id,
+            store=store,
+            tuple_writer=self._tuple_writer,
+            existing_tuples=self._existing_tuples,
+        )
 
 
 def tenant_role_tuples(assignments: list[AccessRoleAssignment]) -> tuple[tuple[str, str, str], ...]:
