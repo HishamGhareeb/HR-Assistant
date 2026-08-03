@@ -28,6 +28,18 @@ DEMO_TENANT_ID = "demo-org"
 
 
 @dataclass(frozen=True)
+class DemoEmployee:
+    user_id: str
+    display_name: str
+    department: str
+    title: str
+    reports_to: str | None = None
+    monthly_salary_bhd: int = 900
+    employment_type: str = "Full-time"
+    nationality_category: str = "non_bahraini_private_sector"
+
+
+@dataclass(frozen=True)
 class DemoPersona:
     """One scripted demo user. ``role_description`` is documentation for
     whoever is running the pilot, not an authorization construct -- actual
@@ -41,12 +53,50 @@ class DemoPersona:
     role_description: str
 
 
+DEMO_COMPANY_NAME = "Pearl Horizon Trading W.L.L."
+
+
+DEMO_EMPLOYEES: tuple[DemoEmployee, ...] = (
+    DemoEmployee("layla", "Layla Al Haddad", "leadership", "Chief Executive Officer", monthly_salary_bhd=3200, nationality_category="bahraini_private_sector"),
+    DemoEmployee("omar", "Omar Mahmood", "leadership", "Chief Operating Officer", reports_to="layla", monthly_salary_bhd=2700, nationality_category="bahraini_private_sector"),
+    DemoEmployee("farah", "Farah Al Zayani", "engineering", "Engineering Manager", reports_to="omar", monthly_salary_bhd=2400, nationality_category="bahraini_private_sector"),
+    DemoEmployee("priya", "Priya Nair", "engineering", "Senior Software Engineer", reports_to="farah", monthly_salary_bhd=1450),
+    DemoEmployee("yusuf", "Yusuf Khan", "engineering", "Backend Engineer", reports_to="farah", monthly_salary_bhd=1250),
+    DemoEmployee("noura", "Noura Al Khalifa", "engineering", "QA Automation Engineer", reports_to="farah", monthly_salary_bhd=1150, nationality_category="bahraini_private_sector"),
+    DemoEmployee("daniel", "Daniel Mensah", "engineering", "DevOps Engineer", reports_to="farah", monthly_salary_bhd=1350),
+    DemoEmployee("mariam", "Mariam Al Ansari", "product", "Product Manager", reports_to="omar", monthly_salary_bhd=1800, nationality_category="bahraini_private_sector"),
+    DemoEmployee("ahmed", "Ahmed Saleh", "product", "Product Designer", reports_to="mariam", monthly_salary_bhd=1200, nationality_category="bahraini_private_sector"),
+    DemoEmployee("sara", "Sara Haddad", "product", "Business Analyst", reports_to="mariam", monthly_salary_bhd=1100),
+    DemoEmployee("khalid", "Khalid Al Noor", "sales", "Sales Manager", reports_to="omar", monthly_salary_bhd=1900, nationality_category="bahraini_private_sector"),
+    DemoEmployee("fatima", "Fatima Jassim", "sales", "Account Executive", reports_to="khalid", monthly_salary_bhd=1000, nationality_category="bahraini_private_sector"),
+    DemoEmployee("raj", "Raj Patel", "sales", "Account Executive", reports_to="khalid", monthly_salary_bhd=950),
+    DemoEmployee("lina", "Lina Mansour", "sales", "Sales Development Representative", reports_to="khalid", monthly_salary_bhd=850),
+    DemoEmployee("hassan", "Hassan Abbas", "customer-success", "Customer Success Manager", reports_to="omar", monthly_salary_bhd=1700, nationality_category="bahraini_private_sector"),
+    DemoEmployee("amina", "Amina Noor", "customer-success", "Implementation Specialist", reports_to="hassan", monthly_salary_bhd=950),
+    DemoEmployee("joel", "Joel Fernandes", "customer-success", "Support Specialist", reports_to="hassan", monthly_salary_bhd=780),
+    DemoEmployee("reem", "Reem Al Saffar", "finance", "Finance Manager", reports_to="omar", monthly_salary_bhd=1750, nationality_category="bahraini_private_sector"),
+    DemoEmployee("zainab", "Zainab Ali", "finance", "Payroll Specialist", reports_to="reem", monthly_salary_bhd=1050, nationality_category="bahraini_private_sector"),
+    DemoEmployee("miguel", "Miguel Santos", "finance", "Accounts Officer", reports_to="reem", monthly_salary_bhd=900),
+    DemoEmployee("hr-demo", "Demo HR Admin", "people-ops", "People Operations Lead", reports_to="omar", monthly_salary_bhd=1650, nationality_category="bahraini_private_sector"),
+    DemoEmployee("salma", "Salma Yousif", "people-ops", "Recruiter", reports_to="hr-demo", monthly_salary_bhd=950, nationality_category="bahraini_private_sector"),
+    DemoEmployee("ravi", "Ravi Menon", "people-ops", "HR Coordinator", reports_to="hr-demo", monthly_salary_bhd=820),
+    DemoEmployee("tariq", "Tariq Al Rumaihi", "operations", "Operations Supervisor", reports_to="omar", monthly_salary_bhd=1200, nationality_category="bahraini_private_sector"),
+    DemoEmployee("mei", "Mei Chen", "operations", "Office Administrator", reports_to="tariq", monthly_salary_bhd=760),
+)
+
+
 DEMO_PERSONAS: tuple[DemoPersona, ...] = (
     DemoPersona(
         user_id="priya",
         display_name="Priya Nair",
         department="engineering",
         role_description="Employee -- reports to Farah. Can see her own records and public policies.",
+    ),
+    DemoPersona(
+        user_id="noura",
+        display_name="Noura Al Khalifa",
+        department="engineering",
+        role_description="Employee -- Bahraini team member with leave and appraisal records.",
     ),
     DemoPersona(
         user_id="farah",
@@ -56,6 +106,12 @@ DEMO_PERSONAS: tuple[DemoPersona, ...] = (
             "Engineering manager -- sees her department's employee/leave/performance "
             "records via 'manager from department', but never salary data."
         ),
+    ),
+    DemoPersona(
+        user_id="reem",
+        display_name="Reem Al Saffar",
+        department="finance",
+        role_description="Finance manager -- sees finance team HR records, but not salary records outside HR permissions.",
     ),
     DemoPersona(
         user_id="hr-demo",
@@ -96,66 +152,93 @@ def demo_feedback_authorizer_map() -> dict[str, list[str]]:
 
 
 def build_demo_records() -> tuple[HrSourceRecord, ...]:
-    """The full synthetic dataset, covering every doctype
+    """The full synthetic dataset, covering every record type
     ``glue.hr_source_sync`` maps and every classification tier: PUBLIC (HR
     Policy), INTERNAL (Employee, Leave Application), MANAGER_ONLY
     (Appraisal), HR_ONLY (Salary Slip)."""
 
-    return (
+    departments = sorted({employee.department for employee in DEMO_EMPLOYEES})
+    records: list[HrSourceRecord] = [
+        HrSourceRecord(
+            doctype="Department",
+            name=department,
+            tenant_id=DEMO_TENANT_ID,
+            fields={"department_name": department.replace("-", " ").title()},
+        )
+        for department in departments
+    ]
+
+    records.extend(
         HrSourceRecord(
             doctype="Employee",
-            name="EMP-farah",
+            name=f"EMP-{employee.user_id}",
             tenant_id=DEMO_TENANT_ID,
             fields={
-                "user_id": "farah",
-                "department": "engineering",
-                "employee_name": "Farah Al Zayani",
+                "user_id": employee.user_id,
+                "department": employee.department,
+                "employee_name": employee.display_name,
+                "title": employee.title,
+                "reports_to": employee.reports_to or "",
+                "employment_type": employee.employment_type,
+                "nationality_category": employee.nationality_category,
             },
-        ),
-        HrSourceRecord(
-            doctype="Employee",
-            name="EMP-priya",
-            tenant_id=DEMO_TENANT_ID,
-            fields={
-                "user_id": "priya",
-                "department": "engineering",
-                "employee_name": "Priya Nair",
-                "reports_to": "farah",
-            },
-        ),
+        )
+        for employee in DEMO_EMPLOYEES
+    )
+
+    leave_status_cycle = ("Approved", "Pending", "Approved", "Rejected")
+    records.extend(
         HrSourceRecord(
             doctype="Leave Application",
-            name="LA-priya-1",
+            name=f"LA-{employee.user_id}-2026-{index + 1:02d}",
             tenant_id=DEMO_TENANT_ID,
             fields={
-                "employee_user_id": "priya",
-                "department": "engineering",
-                "leave_type": "Annual Leave",
-                "status": "Approved",
+                "employee_user_id": employee.user_id,
+                "department": employee.department,
+                "leave_type": "Annual Leave" if index % 5 else "Sick Leave",
+                "status": leave_status_cycle[index % len(leave_status_cycle)],
             },
-        ),
+        )
+        for index, employee in enumerate(DEMO_EMPLOYEES)
+        if employee.user_id != "layla"
+    )
+
+    records.extend(
         HrSourceRecord(
             doctype="Appraisal",
-            name="APP-priya-2026-h1",
+            name=f"APP-{employee.user_id}-2026-h1",
             tenant_id=DEMO_TENANT_ID,
             fields={
-                "employee_user_id": "priya",
-                "department": "engineering",
+                "employee_user_id": employee.user_id,
+                "department": employee.department,
                 "summary": (
-                    "Priya exceeded expectations in H1 2026, with strong delivery on "
-                    "the payroll integration project and consistently positive peer feedback."
+                    f"{employee.display_name}, {employee.title}, had a strong H1 2026 review. "
+                    f"Key themes: reliable delivery, cross-team communication, and one development "
+                    f"goal agreed with {employee.reports_to or 'leadership'} for the next cycle."
                 ),
             },
-        ),
+        )
+        for employee in DEMO_EMPLOYEES
+        if employee.user_id not in {"layla", "omar"}
+    )
+
+    records.extend(
         HrSourceRecord(
             doctype="Salary Slip",
-            name="SAL-priya-2026-07",
+            name=f"SAL-{employee.user_id}-2026-07",
             tenant_id=DEMO_TENANT_ID,
             fields={
-                "employee_user_id": "priya",
+                "employee_user_id": employee.user_id,
                 "period": "July 2026",
+                "monthly_salary_bhd": str(employee.monthly_salary_bhd),
+                "worker_category": employee.nationality_category,
             },
-        ),
+        )
+        for employee in DEMO_EMPLOYEES
+    )
+
+    records.extend(
+        (
         HrSourceRecord(
             doctype="HR Policy",
             name="POL-annual-leave",
@@ -193,7 +276,61 @@ def build_demo_records() -> tuple[HrSourceRecord, ...]:
                 ),
             },
         ),
+        HrSourceRecord(
+            doctype="HR Policy",
+            name="POL-bahrain-payroll",
+            tenant_id=DEMO_TENANT_ID,
+            fields={
+                "title": "Bahrain Payroll Compliance Policy",
+                "body": (
+                    "Payroll is processed monthly in Bahraini dinars. HR validates SIO contribution "
+                    "coverage, WPS file readiness, and non-Bahraini end-of-service benefit treatment "
+                    "before releasing payroll. Unsupported statutory combinations are escalated for "
+                    "human payroll review rather than guessed."
+                ),
+            },
+        ),
+        HrSourceRecord(
+            doctype="HR Policy",
+            name="POL-data-access",
+            tenant_id=DEMO_TENANT_ID,
+            fields={
+                "title": "HR Data Access Policy",
+                "body": (
+                    "Employees may view their own HR records and tenant-wide policies. Managers may "
+                    "view approved team HR and performance records needed for supervision, but salary "
+                    "records remain HR-only."
+                ),
+            },
+        ),
+        HrSourceRecord(
+            doctype="HR Policy",
+            name="POL-probation",
+            tenant_id=DEMO_TENANT_ID,
+            fields={
+                "title": "Probation and Review Policy",
+                "body": (
+                    "New hires complete a structured probation review with their manager. People Ops "
+                    "tracks review completion, missing documents, and any compliance-sensitive follow-up."
+                ),
+            },
+        ),
+        HrSourceRecord(
+            doctype="HR Policy",
+            name="POL-expense-claims",
+            tenant_id=DEMO_TENANT_ID,
+            fields={
+                "title": "Expense Claims Policy",
+                "body": (
+                    "Business expenses require receipts and manager approval. Finance reviews claims "
+                    "above BHD 250 and escalates unusual patterns to People Ops when they touch payroll."
+                ),
+            },
+        ),
+        )
     )
+
+    return tuple(records)
 
 
 @dataclass(frozen=True)

@@ -1,32 +1,93 @@
-# React + TypeScript + Vite
+# RAL HRMS frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite + TypeScript frontend for the HR Assistant pilot.
 
-Currently, two official plugins are available:
+## What the demo includes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The default demo tenant is `demo-org`, representing **Pearl Horizon Trading
+W.L.L.**, a synthetic 25-person Bahrain company. The seed data includes:
 
-## React Compiler
+- 25 employees across 8 departments
+- employee profiles
+- leave applications
+- performance appraisals
+- salary slips
+- tenant-wide HR policies
+- Bahrain payroll/WPS policy coverage
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Representative login personas are shown on the sign-in screen:
 
-## Expanding the Oxlint configuration
+- `priya` — employee
+- `noura` — Bahraini employee
+- `farah` — engineering manager
+- `reem` — finance manager
+- `hr-demo` — HR admin
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Run locally
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+From the repository root:
+
+```powershell
+uv sync --extra dev
+uv run python scripts/generate_dev_auth_keypair.py
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Copy the printed values into your local `.env`, then start the API:
+
+```powershell
+uv run uvicorn glue.app:app --reload
+```
+
+In a second terminal:
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+Open the Vite URL printed in the terminal, usually `http://localhost:5173`.
+
+## Seed the 25-person demo organization
+
+The UI can mint demo tokens locally, but real chat answers require the demo
+records to be loaded into Onyx/OpenFGA:
+
+```powershell
+uv run python scripts/seed_demo_org.py
+```
+
+The script expects these environment variables to point at your local stack:
+
+- `ONYX_API_URL`
+- `ONYX_API_KEY`
+- `OPENFGA_API_URL`
+- `OPENFGA_STORE_ID`
+- `OPENFGA_MODEL_ID` when applicable
+
+Safe to re-run: the sync engine is idempotent and reports unchanged records
+instead of duplicating the demo data.
+
+## Useful walkthrough
+
+1. Sign in as `priya` and ask: “How many days of annual leave do employees get per year?”
+2. As `priya`, ask: “What did my last performance review say?”
+3. Switch to `farah` and ask: “What is Priya's salary?” The expected result is no information, proving managers cannot see salary data.
+4. Switch to `hr-demo` and ask the same salary question. HR should be able to see the HR-only record.
+5. Open Feedback & Quality to see unanswered/escalated feedback.
+6. Open Bahrain Payroll and run SIO, EOSB, and WPS sample validations.
+
+## Verify before pushing
+
+From `web/`:
+
+```powershell
+npm test
+npm run build
+```
+
+From the repository root:
+
+```powershell
+uv run --extra dev pytest
+```

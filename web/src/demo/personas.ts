@@ -22,10 +22,22 @@ export const DEMO_PERSONAS: DemoPersona[] = [
     roleDescription: "Employee -- reports to Farah. Sees her own records and public policies.",
   },
   {
+    userId: "noura",
+    displayName: "Noura Al Khalifa",
+    department: "Engineering",
+    roleDescription: "Employee -- Bahraini team member with leave, appraisal, and payroll scenarios.",
+  },
+  {
     userId: "farah",
     displayName: "Farah Al Zayani",
     department: "Engineering",
     roleDescription: "Priya's manager -- sees her department's records, never salary data.",
+  },
+  {
+    userId: "reem",
+    displayName: "Reem Al Saffar",
+    department: "Finance",
+    roleDescription: "Finance manager -- useful for payroll and WPS walkthroughs.",
   },
   {
     userId: "hr-demo",
