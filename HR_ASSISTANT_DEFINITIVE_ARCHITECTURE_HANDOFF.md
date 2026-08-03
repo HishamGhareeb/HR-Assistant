@@ -10,7 +10,7 @@ Its current responsibilities are:
 - Generate reviewable HR suggestions.
 - Provide a tenant-scoped HR review inbox.
 - Record approval, rejection, or dismissal decisions.
-- Synchronize synthetic Frappe-shaped records into Onyx and OpenFGA.
+- Synchronize synthetic HR-source-shaped records into Onyx and OpenFGA.
 - Produce privacy-preserving audit and operational telemetry.
 
 The target product is a sellable, secure, multi-tenant HRMS + AI platform supporting:
@@ -37,7 +37,7 @@ This handoff reflects the supplied repository context, including the stacked HIS
 | Component | Current responsibility |
 |---|---|
 | FastAPI application | HTTP API, authentication dependencies, route orchestration |
-| Frappe HR | Intended external HR system of record |
+| RAL HRMS | Intended external HR system of record |
 | Onyx | External retrieval/vector-search layer |
 | OpenFGA | Tenant roles and document-level authorization graph |
 | Anthropic Claude | Model completion provider |
@@ -46,7 +46,7 @@ This handoff reflects the supplied repository context, including the stacked HIS
 | Langfuse | Optional metadata-only tracing |
 | Prometheus | Aggregate operational metrics |
 
-Frappe HR remains external. The application does not contain a Frappe write client in its suggestion or admin-control workflows.
+RAL HRMS remains external. The application does not contain a RAL HRMS write client in its suggestion or admin-control workflows.
 
 ### 2.2 Technology stack
 
@@ -143,7 +143,7 @@ Current persistence is:
 | Audit events | `HashChainedJsonlAuditSink` | Append-only and hash-chained; tamper-evident, not WORM or tamper-proof |
 | Suggestions | `JsonlSuggestionStore` | Append-only local application state; unsuitable for multi-instance production |
 | Admin controls | `InMemoryAdminControlStore` | Process-local and lost on restart |
-| Frappe sync checkpoints | `InMemoryCheckpointStore` | Process-local and lost on restart |
+| RAL HRMS sync checkpoints | `InMemoryCheckpointStore` | Process-local and lost on restart |
 | Retrieval documents | Onyx | External system; not owned by this repository |
 | Authorization tuples | OpenFGA | External authorization store |
 
@@ -173,7 +173,7 @@ Suggestion invariants:
 - A `pending` suggestion must not have `decided_at` or `decided_by`.
 - An `approved`, `rejected`, or `dismissed` suggestion must have both.
 - A suggestion decision records a review outcome only.
-- AI suggestion approval must not mutate Frappe or any HR source system.
+- AI suggestion approval must not mutate RAL HRMS or any HR source system.
 
 Tenant guard:
 
@@ -267,15 +267,15 @@ department:acme__engineering
 
 This is an application-level convention. The OpenFGA relation graph cannot independently prevent a tuple-writing defect from applying the wrong tenant prefix. Tuple writers must therefore enforce tenant invariants. A future relational database with row-level security can provide an additional persistence-level backstop, but it does not replace correct OpenFGA tuple construction.
 
-### 3.7 Frappe-shaped synchronization model
+### 3.7 HR-source-shaped synchronization model
 
-`glue/frappe_sync.py` maps synthetic Frappe-shaped records into:
+`glue/hr_source_sync.py` maps synthetic HR-source-shaped records into:
 
 1. Onyx indexed documents.
 2. OpenFGA tuples.
 3. Sync checkpoint and reconciliation state.
 
-`FrappeRecord` contains:
+`HrSourceRecord` contains:
 
 - `doctype`
 - `name`
@@ -285,7 +285,7 @@ This is an application-level convention. The OpenFGA relation graph cannot indep
 
 #### Exact doctype mapping
 
-| Frappe doctype | Document type | Classification | OpenFGA tuple behavior |
+| HR source record type | Document type | Classification | OpenFGA tuple behavior |
 |---|---|---|---|
 | `Employee` | `employee_record` | `internal` | Department `member`; department `manager` when `reports_to` exists |
 | `Department` | None | None | No document or tuples |
@@ -304,8 +304,8 @@ This is an application-level convention. The OpenFGA relation graph cannot indep
 
 `map_record(record, config)` is intended to remain pure and deterministic:
 
-- Unsupported doctypes raise `FrappeMappingError`.
-- Missing required fields raise `FrappeMappingError`.
+- Unsupported doctypes raise `HrSourceMappingError`.
+- Missing required fields raise `HrSourceMappingError`.
 - `Department` produces no document or tuples.
 - Other supported doctypes follow the table above.
 
@@ -316,7 +316,7 @@ Sync idempotency uses a content hash over the mapped document and tuples:
 - Deleted records retract document and tuple state.
 - Failed records do not advance checkpoints.
 
-This is a synthetic synchronization boundary. It is not a complete production Frappe connector or bidirectional HRMS integration.
+This is a synthetic synchronization boundary. It is not a complete production RAL HRMS connector or bidirectional HRMS integration.
 
 ### 3.8 Suggestion review model
 
@@ -336,7 +336,7 @@ Relationships and rules:
 - Repeating the same decision by the same reviewer is idempotent.
 - Attempting a different decision after completion raises a conflict.
 - All lookups and decisions are tenant-scoped.
-- Approval never applies the suggestion to Frappe or another HR source system.
+- Approval never applies the suggestion to RAL HRMS or another HR source system.
 
 ### 3.9 HR administrator control model
 
@@ -357,8 +357,8 @@ Relationships:
 - Source status is keyed by `(tenant_id, source_id)`.
 - Sync runs are tenant-filtered and listed newest-first.
 - Synthetic resync and revoke operations reuse `SyncEngine`.
-- The admin-control store has no Frappe write client.
-- Tests track `frappe_mutation_attempts = 0`.
+- The admin-control store has no RAL HRMS write client.
+- Tests track `RAL HRMS_mutation_attempts = 0`.
 
 ### 3.10 HRMS entities not implemented
 
@@ -376,7 +376,7 @@ The following are not currently implemented as durable application entities:
 - Subscription and billing plans.
 - Feature entitlements.
 
-Some related concepts appear only as Frappe-shaped source records or retrieval document categories. They are not first-class application tables.
+Some related concepts appear only as HR-source-shaped source records or retrieval document categories. They are not first-class application tables.
 
 ---
 
@@ -539,7 +539,7 @@ The Onyx contract is tested against a pinned response shape but has not yet been
 
 ### 4.7 Indexing boundary
 
-`glue/onyx_indexer.py` is the write-side adapter used by the Frappe synchronization flow.
+`glue/onyx_indexer.py` is the write-side adapter used by the RAL HRMS synchronization flow.
 
 It:
 
@@ -663,7 +663,7 @@ Rules:
 - A different decision after completion raises `SuggestionTransitionError`.
 - Decisions and lookups are tenant-scoped.
 - Decision history is append-only at the service layer.
-- AI suggestion approval must not mutate Frappe or any HR source system.
+- AI suggestion approval must not mutate RAL HRMS or any HR source system.
 
 Any future source-system action must be a separate, explicitly designed workflow with its own authorization, validation, audit, idempotency, and rollback model. It must not be silently attached to suggestion approval.
 
@@ -691,10 +691,10 @@ Rules:
 
 - Admin APIs require tenant-scoped HR administrator authorization.
 - Tenant ID comes from the signed identity.
-- Resync accepts Frappe-shaped records and rewrites them to the authenticated tenant.
-- Revoke creates a caller-tenant `FrappeRecord(deleted=True)`.
+- Resync accepts HR-source-shaped records and rewrites them to the authenticated tenant.
+- Revoke creates a caller-tenant `HrSourceRecord(deleted=True)`.
 - Failures are visible and retryable.
-- Admin controls do not mutate Frappe HR.
+- Admin controls do not mutate RAL HRMS.
 
 ### 5.4 Resilience state machines
 
@@ -737,7 +737,7 @@ Every pull request must preserve these rules:
 
 5. **Fail closed.** Authorization failures, missing classification masks, tenant mismatches, and empty authorized-document sets must stop before the model call.
 
-6. **AI suggestion approval must not mutate Frappe or any HR source system.** Approval records a human decision only.
+6. **AI suggestion approval must not mutate RAL HRMS or any HR source system.** Approval records a human decision only.
 
 7. **Payroll and compliance calculations must be deterministic code, not LLM-derived.** This includes salaries, leave entitlements, taxes, contributions, statutory benefits, effective-date rules, and country-law calculations.
 
@@ -745,7 +745,7 @@ Every pull request must preserve these rules:
 
 9. **Durable persistence must remain behind protocols or interfaces.** Do not bind route handlers directly to PostgreSQL, JSONL, or another storage implementation.
 
-10. **External systems must use deterministic fakes in ordinary automated tests.** Tests should not depend on live Onyx, OpenFGA, Frappe, Claude, or IdP state.
+10. **External systems must use deterministic fakes in ordinary automated tests.** Tests should not depend on live Onyx, OpenFGA, RAL HRMS, Claude, or IdP state.
 
 11. **Every persisted or retrieved object must carry enforceable tenant context.**
 
@@ -794,7 +794,7 @@ Missing controls include:
 - No production user lifecycle exists.
 - No SSO or SCIM integration.
 - JWKS behavior is structurally tested but not verified with a selected live identity provider.
-- Manager hierarchy ingestion exists only through synthetic Frappe mapping.
+- Manager hierarchy ingestion exists only through synthetic RAL HRMS mapping.
 
 ### 7.4 Retrieval and RAG
 
@@ -866,7 +866,7 @@ Tests currently cover:
 - Tenant mismatch rejection.
 - Onyx request and response contracts.
 - OpenFGA classification masks and document filtering.
-- Frappe mapping, idempotency, and retry behavior.
+- RAL HRMS mapping, idempotency, and retry behavior.
 - Suggestion-review lifecycle.
 - Pipeline fail-closed behavior.
 - Audit privacy and hash-chain verification.
@@ -989,7 +989,7 @@ Before merging any change, confirm:
 - Cross-tenant documents are rejected.
 - OpenFGA failures stop the model path.
 - No unauthorized or unscanned content reaches the LLM response parser.
-- Suggestion approval does not write to Frappe or another HR system.
+- Suggestion approval does not write to RAL HRMS or another HR system.
 - Payroll and compliance logic, if introduced, is deterministic and version-tested.
 - Audit, traces, and metrics contain metadata only.
 - New persistence is accessed through protocols.

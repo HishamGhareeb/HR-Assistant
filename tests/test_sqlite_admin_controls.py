@@ -2,7 +2,7 @@ import pytest
 
 from glue.admin_controls import TenantRole
 from glue.domain import Identity
-from glue.frappe_sync import FrappeRecord, SyncConfig, SyncEngine
+from glue.hr_source_sync import HrSourceRecord, SyncConfig, SyncEngine
 from glue.sqlite_admin_controls import SqliteAdminControlStore
 
 
@@ -43,8 +43,8 @@ def identity(tenant_id: str = "acme", user_id: str = "hr-1") -> Identity:
     return Identity(tenant_id=tenant_id, user_id=user_id)
 
 
-def hr_policy(tenant_id: str = "acme") -> FrappeRecord:
-    return FrappeRecord(
+def hr_policy(tenant_id: str = "acme") -> HrSourceRecord:
+    return HrSourceRecord(
         doctype="HR Policy",
         name="POL-1",
         tenant_id=tenant_id,
@@ -140,7 +140,7 @@ async def test_sqlite_admin_failed_sync_is_durable_and_retryable(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_sqlite_admin_revoke_updates_source_status_without_frappe_mutation(tmp_path):
+async def test_sqlite_admin_revoke_updates_source_status_without_source_hrms_mutation(tmp_path):
     path = tmp_path / "admin.sqlite3"
     index = FakeDocumentIndex()
     store = SqliteAdminControlStore(path)
@@ -163,4 +163,4 @@ async def test_sqlite_admin_revoke_updates_source_status_without_frappe_mutation
     restored = SqliteAdminControlStore(path)
     assert revoked.deleted == 1
     assert restored.list_sources("acme")[0].last_action == "synthetic_revoke"
-    assert restored.frappe_mutation_attempts == 0
+    assert restored.source_mutation_attempts == 0

@@ -77,7 +77,7 @@ Instead, the adapter requires `metadata.record_type` to already be one of
 `glue.domain.DocumentType` (`employee_record`, `leave_record`,
 `performance_record`, `salary_record`, `policy_document`) — tagging
 documents with that metadata at ingestion time is the responsibility of the
-Frappe → Onyx sync. Same for `metadata.tenant_id` and
+RAL HRMS → Onyx sync. Same for `metadata.tenant_id` and
 `metadata.classification`.
 
 Classifications are tenant-scoped. `public` means visible to authenticated
@@ -116,6 +116,6 @@ and will catch a drift between this file and its own docstring.
 **This has not been run against a live Onyx instance.** The mapping above
 is contract-correct against the pinned source, but Onyx's actual runtime
 behavior (auth failure codes, empty-index responses, rate limiting) is
-unconfirmed until Stage 1 brings a real instance up and Frappe HR data is
+unconfirmed until Stage 1 brings a real instance up and RAL HRMS data is
 indexed into it. Re-verify this file against that point release when that
 happens, and update `ONYX_PINNED_VERSION` if the deployed version differs.

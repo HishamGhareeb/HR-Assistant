@@ -11,7 +11,7 @@ HIS-21 suggestion review work and HIS-22 HR admin ingestion/access-control work.
 `HR-Assistant` is a Python/FastAPI service for a read-only, human-in-the-loop HR
 assistant. The service answers employee HR questions using authorized retrieval
 context and creates reviewable HR suggestions. It deliberately does not mutate
-Frappe HR or any source HRMS. Human HR users review suggestions through a
+RAL HRMS or any source HRMS. Human HR users review suggestions through a
 tenant-scoped inbox; approval/rejection/dismissal records a decision only.
 
 The current architecture is a secure core rather than a complete HRMS product.
@@ -19,7 +19,7 @@ It has no relational application database or ORM yet. Durable state is currently
 limited to append-only JSONL files for audit and suggestion review state, plus
 external systems:
 
-- Frappe HR is the intended system of record.
+- RAL HRMS is the intended system of record.
 - Onyx is the retrieval/vector search layer.
 - OpenFGA is the authorization graph.
 - Claude is the model provider.
@@ -112,7 +112,7 @@ Current persistence is intentionally lightweight:
 | Audit events | `HashChainedJsonlAuditSink` | Append-only JSONL, hash-chained, tamper-evident but not WORM/tamper-proof. |
 | Suggestions | `JsonlSuggestionStore` | Append-only JSONL application state for review inbox. |
 | Admin controls | `InMemoryAdminControlStore` | Process-local operator state; not durable. |
-| Frappe sync checkpoints | `InMemoryCheckpointStore` | Process-local checkpointing for synthetic sync. |
+| RAL HRMS sync checkpoints | `InMemoryCheckpointStore` | Process-local checkpointing for synthetic sync. |
 | Retrieval documents | Onyx | External search/vector layer, not owned by this repo. |
 | Authorization tuples | OpenFGA | External authorization store/model. |
 
@@ -207,7 +207,7 @@ State invariant:
 - `pending` must not have `decided_at` or `decided_by`.
 - `approved`, `rejected`, and `dismissed` must have `decided_at` and
   `decided_by`.
-- Suggestions never mutate Frappe or HR source systems.
+- Suggestions never mutate RAL HRMS or HR source systems.
 
 #### Tenant guard
 
@@ -295,15 +295,15 @@ The relation graph cannot prevent a tuple-writing bug that writes the wrong
 tenant prefix. Tuple writers must preserve tenant invariants at sync/provisioning
 time.
 
-### Frappe sync model
+### RAL HRMS sync model
 
-`glue/frappe_sync.py` maps synthetic Frappe-shaped records to:
+`glue/hr_source_sync.py` maps synthetic HR-source-shaped records to:
 
 1. Onyx indexed documents.
 2. OpenFGA tuples.
 3. Sync checkpoint/reconciliation state.
 
-#### Input shape: `FrappeRecord`
+#### Input shape: `HrSourceRecord`
 
 - `doctype`
 - `name`
@@ -313,7 +313,7 @@ time.
 
 #### Supported doctypes and mapping
 
-| Frappe doctype | Document type | Classification | OpenFGA tuples |
+| HR source record type | Document type | Classification | OpenFGA tuples |
 |---|---|---|---|
 | `Employee` | `employee_record` | `internal` | Department `member`; department `manager` if `reports_to` exists |
 | `Department` | none | none | none |
@@ -366,8 +366,8 @@ Relationships:
 - Source status is stored by `(tenant_id, source_id)`.
 - Sync runs are tenant-filtered and listed newest-first.
 - Synthetic resync/revoke uses the existing `SyncEngine`.
-- The admin control store contains no Frappe write client and tracks
-  `frappe_mutation_attempts = 0` in tests.
+- The admin control store contains no RAL HRMS write client and tracks
+  `RAL HRMS_mutation_attempts = 0` in tests.
 
 ### Payroll, attendance, and other HRMS entities
 
@@ -383,7 +383,7 @@ These are not implemented as application entities yet:
 - Billing plans
 - Country-law rule packs
 
-Some source-shaped concepts exist only as synthetic Frappe records or retrieval
+Some source-shaped concepts exist only as synthetic RAL HRMS records or retrieval
 document categories. They are not durable first-class database tables in this
 repo yet.
 
@@ -418,7 +418,7 @@ Dependency injection points:
 | `POST` | `/v1/hr/suggestions/{suggestion_id}/decision` | JWT + HR reviewer | `SuggestionStore.decide(...)` | Approve/reject/dismiss. |
 | `GET` | `/v1/hr/admin/sources` | JWT + HR admin | `AdminControlStore.list_sources(tenant_id)` | Source/sync status. |
 | `GET` | `/v1/hr/admin/sync/runs` | JWT + HR admin | `AdminControlStore.list_runs(tenant_id)` | Sync run history. |
-| `POST` | `/v1/hr/admin/sync/resync` | JWT + HR admin | `AdminControlStore.synthetic_resync(..., SyncEngine)` | Synthetic resync of Frappe-shaped records. |
+| `POST` | `/v1/hr/admin/sync/resync` | JWT + HR admin | `AdminControlStore.synthetic_resync(..., SyncEngine)` | Synthetic resync of HR-source-shaped records. |
 | `POST` | `/v1/hr/admin/sync/revoke` | JWT + HR admin | `AdminControlStore.synthetic_revoke(..., SyncEngine)` | Synthetic deletion/revoke marker. |
 | `GET` | `/v1/hr/admin/access/roles` | JWT + HR admin | `AdminControlStore.list_role_assignments(tenant_id)` | List tenant role mappings. |
 | `PUT` | `/v1/hr/admin/access/roles/{user_id}` | JWT + HR admin | `AdminControlStore.set_role_assignment(...)` | Set tenant-scoped role assignment. |
@@ -536,7 +536,7 @@ Invalid/mismatched documents are dropped client-side.
 
 ### Indexing boundary
 
-`glue/onyx_indexer.py` is the write-side adapter used by Frappe sync to upsert
+`glue/onyx_indexer.py` is the write-side adapter used by RAL HRMS sync to upsert
 or delete indexed documents. It is separate from retrieval. It writes Onyx
 document text and metadata; it does not decide authorization.
 
@@ -620,7 +620,7 @@ Rules:
 - Changing an already decided suggestion raises `SuggestionTransitionError`.
 - Store lookups are tenant-scoped.
 - Decision history is append-only at the service layer.
-- A decision never applies data to Frappe HR.
+- A decision never applies data to RAL HRMS.
 
 ### HR admin synthetic sync state
 
@@ -646,17 +646,17 @@ Rules:
 
 - Admin APIs require tenant-scoped HR admin authorization.
 - The server derives tenant ID from the signed identity, not request body.
-- Resync accepts Frappe-shaped records but rewrites them to the caller tenant.
-- Revoke creates a `FrappeRecord(deleted=True)` for the caller tenant.
-- Admin controls do not mutate Frappe HR.
+- Resync accepts HR-source-shaped records but rewrites them to the caller tenant.
+- Revoke creates a `HrSourceRecord(deleted=True)` for the caller tenant.
+- Admin controls do not mutate RAL HRMS.
 - Failures are visible and retryable.
 
-### Frappe sync mapping rules
+### RAL HRMS sync mapping rules
 
 `map_record(record, config)` is pure and deterministic:
 
-- Unsupported doctypes raise `FrappeMappingError`.
-- Missing required fields raise `FrappeMappingError`.
+- Unsupported doctypes raise `HrSourceMappingError`.
+- Missing required fields raise `HrSourceMappingError`.
 - `Department` creates no document/tuples.
 - `Employee` creates employee document and department membership/manager tuples.
 - `Leave Application` creates leave document and owner/department/hr_admin tuples.
@@ -708,7 +708,7 @@ append-only storage with access controls.
 - No ORM, migrations, RLS policies, or database-level isolation.
 - Suggestion JSONL state is not a durable multi-instance production store.
 - Admin control state is in-memory only.
-- Frappe sync checkpoints are in-memory only.
+- RAL HRMS sync checkpoints are in-memory only.
 - Audit JSONL is tamper-evident but not WORM/tamper-proof.
 
 ### Multi-tenancy gaps
@@ -736,7 +736,7 @@ Missing for production:
 - No SSO/SCIM integration.
 - JWKS resolver is structurally tested but not verified against a chosen live IdP.
 - No production user lifecycle/provisioning workflow.
-- No manager hierarchy ingestion beyond synthetic Frappe mapping.
+- No manager hierarchy ingestion beyond synthetic RAL HRMS mapping.
 
 ### Retrieval/RAG gaps
 
@@ -745,7 +745,7 @@ Missing for production:
 - Onyx admin-search endpoint is used for retrieval; production must validate
   runtime auth behavior, rate limits, and empty-index behavior.
 - No full policy upload pipeline from customer UI.
-- No chunking/embedding ownership pipeline beyond Frappe sync/indexer contracts.
+- No chunking/embedding ownership pipeline beyond RAL HRMS sync/indexer contracts.
 - No prompt-injection adversarial suite is currently present in the repo despite
   README mentioning promptfoo as a future test area.
 
@@ -796,7 +796,7 @@ Strong current test coverage exists for:
 - tenant mismatch rejection.
 - Onyx request/response contract.
 - OpenFGA filtering and pre-retrieval masks.
-- Frappe sync mapping/idempotency/failure retry.
+- RAL HRMS sync mapping/idempotency/failure retry.
 - suggestion review lifecycle.
 - pipeline fail-closed behavior.
 - audit privacy and hash-chain verification.

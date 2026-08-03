@@ -2,7 +2,7 @@
 
 The assistant remains read-only. Model suggestions are persisted as review
 items so authorized HR users can make explicit human decisions, but an
-approval only records that decision. It does not call Frappe, Onyx, or any
+approval only records that decision. It does not call RAL HRMS, Onyx, or any
 other HR source-system mutation API.
 
 ## Lifecycle

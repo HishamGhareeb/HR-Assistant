@@ -40,7 +40,7 @@ from glue.demo_seed import (
     demo_review_authorizer_map,
     seed_demo_organization,
 )
-from glue.frappe_sync import SyncConfig, SyncEngine
+from glue.hr_source_sync import SyncConfig, SyncEngine
 from glue.onyx_indexer import OnyxIndexer
 from glue.openfga_client import OpenFgaTupleWriter
 

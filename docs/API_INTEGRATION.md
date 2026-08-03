@@ -57,7 +57,7 @@ JsonlSuggestionStore           (list/view/approve/reject/dismiss)
 ```
 
 Approval, rejection, and dismissal append immutable decision-history
-records. They do not call Frappe and do not mutate HR source systems.
+records. They do not call RAL HRMS and do not mutate HR source systems.
 
 Every external call in that chain (Onyx, OpenFGA, Claude) is wrapped with
 `call_with_timeout` + `call_with_retries` + a per-dependency

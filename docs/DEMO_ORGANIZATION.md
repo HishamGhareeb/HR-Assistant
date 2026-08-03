@@ -8,7 +8,7 @@ this flow.
 
 ## What gets seeded
 
-Every doctype `glue/frappe_sync.py` maps, across every classification tier
+Every doctype `glue/hr_source_sync.py` maps, across every classification tier
 the pipeline enforces:
 
 | Doctype | Record | Classification |
@@ -22,8 +22,8 @@ the pipeline enforces:
 | HR Policy | Remote Work Policy | PUBLIC |
 | HR Policy | Public Holiday Calendar | PUBLIC |
 
-This is deliberately the same `FrappeRecord` shape and the same
-`SyncEngine` every other Frappe record goes through (`docs/FRAPPE_SYNC.md`)
+This is deliberately the same `HrSourceRecord` shape and the same
+`SyncEngine` every other RAL HRMS record goes through (`docs/hr_source_sync.md`)
 -- seeding a demo organization is not a parallel ingestion path, just a
 synthetic source feeding the real one.
 

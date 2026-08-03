@@ -50,7 +50,7 @@ record ID (`sarah_leave`) exist in two different tenants
 visibility into the other. See the last two test cases in
 `openfga/store-tests.yaml` for the one thing this *doesn't* prove: the
 model can't stop a misconfigured tuple write from crossing tenants — that
-invariant belongs to whatever writes tuples (the Frappe → OpenFGA sync),
+invariant belongs to whatever writes tuples (the RAL HRMS → OpenFGA sync),
 not to this relation graph.
 
 ## Tenant scoping convention
@@ -65,7 +65,7 @@ Isolation instead comes from namespacing every OpenFGA object ID:
 e.g. `leave_record:acme__sarah_leave`. `glue.openfga_client.scoped_object_id`
 builds this consistently; `openfga/model.fga`'s header comment and
 `openfga/store-tests.yaml` document/exercise it. **Every** tuple writer
-(this script's dev seed, and eventually the Frappe → OpenFGA sync) must
+(this script's dev seed, and eventually the RAL HRMS → OpenFGA sync) must
 use the same convention for both the record and anything it references
 (e.g. a `department` object) — a record written with a different tenant
 prefix than expected becomes silently unreachable rather than wrongly

@@ -1,0 +1,1 @@
+# RAL HRMS migrations will be listed here when the scaffold becomes a real RAL HRMS app.

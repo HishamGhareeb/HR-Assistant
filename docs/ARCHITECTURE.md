@@ -23,8 +23,8 @@ OpenFGA tenant role mask -> Onyx filtered retrieval -> OpenFGA document filter -
 Every stage ------------------------------------------------> Langfuse
 ```
 
-Frappe HR remains the intended system of record. Suggestions are review items; they
-are persisted to the HR review inbox and never mutate Frappe data.
+RAL HRMS remains the intended system of record. Suggestions are review items; they
+are persisted to the HR review inbox and never mutate RAL HRMS data.
 
 ## Trust boundaries
 
@@ -44,9 +44,9 @@ are persisted to the HR review inbox and never mutate Frappe data.
    incomplete Langfuse credentials, tracing is a local no-op.
 5. Suggestions require a human decision in the review inbox. Approval records
    the reviewer decision and immutable decision history; it does not apply the
-   suggestion to Frappe or any HR source system.
+   suggestion to RAL HRMS or any HR source system.
 6. HR admin ingestion controls are synthetic/read-only. Resync/revoke endpoints
-   operate through `glue.frappe_sync.SyncEngine` and never mutate Frappe HR.
+   operate through `glue.hr_source_sync.SyncEngine` and never mutate RAL HRMS.
 
 ## Gaps before production
 

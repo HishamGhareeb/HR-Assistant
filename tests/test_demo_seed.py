@@ -18,7 +18,7 @@ from glue.demo_seed import (
     seed_demo_organization,
 )
 from glue.domain import DocumentClassification
-from glue.frappe_sync import FrappeMappingError, SyncConfig, SyncEngine, map_record
+from glue.hr_source_sync import HrSourceMappingError, SyncConfig, SyncEngine, map_record
 
 
 class FakeDocumentIndex:
@@ -56,11 +56,11 @@ def test_every_record_is_scoped_to_the_demo_tenant():
 
 
 def test_every_record_maps_without_error():
-    """Every seeded record must be mappable by the real frappe_sync rules
+    """Every seeded record must be mappable by the real hr_source_sync rules
     -- a demo dataset that fails to map is worse than no demo at all."""
     config = SyncConfig(hr_admin_user_ids=demo_hr_admin_user_ids())
     for record in build_demo_records():
-        map_record(record, config)  # raises FrappeMappingError on failure
+        map_record(record, config)  # raises HrSourceMappingError on failure
 
 
 def test_dataset_covers_every_classification_tier():

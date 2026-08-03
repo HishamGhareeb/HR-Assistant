@@ -53,7 +53,7 @@ handed to a boundary that already requires it:
 - `glue.domain.require_same_tenant` -- generic guard for any contract
 - `glue.onyx_client.OnyxClient.search(question, tenant_id=...)`
 - `glue.openfga_client.OpenFgaFilter.filter_authorized(user_id, documents, tenant_id=...)`
-- `glue.frappe_sync.SyncEngine.sync_all(tenant_id, records)` (rejects a
+- `glue.hr_source_sync.SyncEngine.sync_all(tenant_id, records)` (rejects a
   record whose own `tenant_id` doesn't match)
 
 `build_identity_dependency` produces the FastAPI dependency ready to

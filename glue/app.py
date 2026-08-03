@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .admin_controls import (
@@ -48,6 +50,11 @@ from .bahrain_payroll_api import (
 )
 from .claude_client import ClaudeClient
 from .config import Config
+from .dev_auth import (
+    DevAuthMisconfiguredError,
+    load_dev_auth_settings,
+    mint_dev_token,
+)
 from .domain import Identity, Suggestion, SuggestionStatus
 from .feedback import (
     AnswerFeedback,
@@ -62,7 +69,7 @@ from .feedback import (
     StaticHrFeedbackAuthorizer,
     UnansweredQuestion,
 )
-from .frappe_sync import FrappeRecord, SyncEngine
+from .hr_source_sync import HrSourceRecord, SyncEngine
 from .llm_guard_scan import OutputScanner
 from .observability import Metrics
 from .onyx_client import OnyxClient
@@ -85,6 +92,17 @@ from .tracer import Tracer
 
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=4_000)
+
+
+class DevTokenRequest(BaseModel):
+    tenant_id: str = Field(min_length=1, max_length=200)
+    user_id: str = Field(min_length=1, max_length=200)
+
+
+class DevTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
 
 
 class SuggestionResponse(BaseModel):
@@ -326,7 +344,7 @@ class AdminSourceStatusResponse(BaseModel):
         )
 
 
-class AdminFrappeRecordRequest(BaseModel):
+class AdminHrSourceRecordRequest(BaseModel):
     doctype: str = Field(min_length=1)
     name: str = Field(min_length=1)
     fields: dict = Field(default_factory=dict)
@@ -335,7 +353,7 @@ class AdminFrappeRecordRequest(BaseModel):
 
 class AdminResyncRequest(BaseModel):
     source_id: str = Field(default="synthetic", min_length=1)
-    records: list[AdminFrappeRecordRequest]
+    records: list[AdminHrSourceRecordRequest]
 
 
 class AdminRevokeRequest(BaseModel):
@@ -474,6 +492,20 @@ def create_app(
         description="Read-only, authorization-filtered HR answers and review suggestions.",
         lifespan=lifespan,
     )
+
+    # Empty by default -- a browser-facing frontend (web/) only works
+    # cross-origin once CORS_ALLOWED_ORIGINS is explicitly set (comma-
+    # separated), so a deployment that never sets it has no CORS surface
+    # at all rather than an accidentally-permissive default.
+    cors_origins = [origin.strip() for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     @app.middleware("http")
     async def bind_request_id_middleware(request: Request, call_next):
@@ -655,6 +687,23 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.post("/v1/dev/token", response_model=DevTokenResponse)
+    async def mint_dev_token_endpoint(body: DevTokenRequest) -> DevTokenResponse:
+        # 404, not 401/403/503: this endpoint must look absent in any
+        # deployment that never set DEV_AUTH_ENABLED, not like a guarded
+        # feature worth probing. See glue/dev_auth.py's module docstring.
+        try:
+            settings = load_dev_auth_settings()
+        except DevAuthMisconfiguredError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"dev auth is enabled but misconfigured: {exc}",
+            ) from exc
+        if not settings.enabled:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        token, expires_in = mint_dev_token(settings, tenant_id=body.tenant_id, user_id=body.user_id)
+        return DevTokenResponse(access_token=token, expires_in=expires_in)
+
     @app.get("/metrics")
     async def metrics(active_pipeline: Pipeline = Depends(get_pipeline)) -> Response:
         body, content_type = active_pipeline.metrics.render()
@@ -830,7 +879,7 @@ def create_app(
     ) -> AdminSyncRunResponse:
         authorize_hr_admin(identity, authorizer)
         records = [
-            FrappeRecord(
+            HrSourceRecord(
                 doctype=record.doctype,
                 name=record.name,
                 tenant_id=identity.tenant_id,

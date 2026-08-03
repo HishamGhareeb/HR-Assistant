@@ -378,7 +378,7 @@ def test_verified_identity_feeds_require_same_tenant_and_rejects_foreign_data(ke
     individually valid, correctly-signed pieces of data."""
     from datetime import datetime, timezone
 
-    from glue.frappe_sync import FrappeRecord
+    from glue.hr_source_sync import HrSourceRecord
     from glue.openfga_client import scoped_object_id
     from glue.onyx_client import Document as OnyxDocument
 
@@ -398,7 +398,7 @@ def test_verified_identity_feeds_require_same_tenant_and_rejects_foreign_data(ke
         require_same_tenant(foreign_document.to_canonical(), tenant_id=identity.tenant_id)
 
     # Sanity check the same tenant_id is what the tenant-scoped OpenFGA
-    # object ID and the Frappe sync's cross-tenant guard both key off of.
+    # object ID and the RAL HRMS sync's cross-tenant guard both key off of.
     assert scoped_object_id("leave_record", identity.tenant_id, "x") == "leave_record:acme__x"
-    cross_tenant_record = FrappeRecord(doctype="Leave Application", name="LA-1", tenant_id="globex", fields={})
+    cross_tenant_record = HrSourceRecord(doctype="Leave Application", name="LA-1", tenant_id="globex", fields={})
     assert cross_tenant_record.tenant_id != identity.tenant_id

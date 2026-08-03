@@ -1,18 +1,18 @@
 """Deterministic synthetic demo organization and guided pilot setup (HIS-24).
 
 Produces a working pilot without any real employee data: a small, fixed
-set of `glue.frappe_sync.FrappeRecord` rows for a fictional demo tenant,
+set of `glue.hr_source_sync.HrSourceRecord` rows for a fictional demo tenant,
 scripted personas with known credentials, and a curated list of sample
 questions that exercise the pipeline's classification tiers (public,
 internal, manager-only, HR-only) and its safe "I don't have information on
 that" fallback.
 
-This module contains no I/O -- it only builds `FrappeRecord`s and hands
-them to whatever `glue.frappe_sync.SyncEngine` the caller already has
+This module contains no I/O -- it only builds `HrSourceRecord`s and hands
+them to whatever `glue.hr_source_sync.SyncEngine` the caller already has
 (real Onyx/OpenFGA in production, fakes in tests). It deliberately does
 not invent a parallel ingestion path: seeding a demo organization is just
-running the same sync every other Frappe record goes through, per
-`docs/FRAPPE_SYNC.md`, with synthetic input instead of a real Frappe
+running the same sync every other RAL HRMS record goes through, per
+`docs/hr_source_sync.md`, with synthetic input instead of a real RAL HRMS
 source.
 
 See `scripts/seed_demo_org.py` for the guided, runnable setup path and
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .frappe_sync import FrappeRecord, ReconciliationReport, SyncEngine
+from .hr_source_sync import HrSourceRecord, ReconciliationReport, SyncEngine
 
 DEMO_TENANT_ID = "demo-org"
 
@@ -95,14 +95,14 @@ def demo_feedback_authorizer_map() -> dict[str, list[str]]:
     return _demo_reviewer_map()
 
 
-def build_demo_records() -> tuple[FrappeRecord, ...]:
+def build_demo_records() -> tuple[HrSourceRecord, ...]:
     """The full synthetic dataset, covering every doctype
-    ``glue.frappe_sync`` maps and every classification tier: PUBLIC (HR
+    ``glue.hr_source_sync`` maps and every classification tier: PUBLIC (HR
     Policy), INTERNAL (Employee, Leave Application), MANAGER_ONLY
     (Appraisal), HR_ONLY (Salary Slip)."""
 
     return (
-        FrappeRecord(
+        HrSourceRecord(
             doctype="Employee",
             name="EMP-farah",
             tenant_id=DEMO_TENANT_ID,
@@ -112,7 +112,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 "employee_name": "Farah Al Zayani",
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="Employee",
             name="EMP-priya",
             tenant_id=DEMO_TENANT_ID,
@@ -123,7 +123,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 "reports_to": "farah",
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="Leave Application",
             name="LA-priya-1",
             tenant_id=DEMO_TENANT_ID,
@@ -134,7 +134,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 "status": "Approved",
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="Appraisal",
             name="APP-priya-2026-h1",
             tenant_id=DEMO_TENANT_ID,
@@ -147,7 +147,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 ),
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="Salary Slip",
             name="SAL-priya-2026-07",
             tenant_id=DEMO_TENANT_ID,
@@ -156,7 +156,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 "period": "July 2026",
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="HR Policy",
             name="POL-annual-leave",
             tenant_id=DEMO_TENANT_ID,
@@ -169,7 +169,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 ),
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="HR Policy",
             name="POL-remote-work",
             tenant_id=DEMO_TENANT_ID,
@@ -181,7 +181,7 @@ def build_demo_records() -> tuple[FrappeRecord, ...]:
                 ),
             },
         ),
-        FrappeRecord(
+        HrSourceRecord(
             doctype="HR Policy",
             name="POL-public-holidays",
             tenant_id=DEMO_TENANT_ID,

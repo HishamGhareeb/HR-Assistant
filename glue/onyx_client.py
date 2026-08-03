@@ -34,7 +34,7 @@ document set when it's told which tenant is asking.
 
 ``metadata`` must carry ``tenant_id`` and ``record_type`` (one of
 ``glue.domain.DocumentType``) for every ingested document -- that tagging is
-the responsibility of the Frappe -> Onyx sync. A document missing either
+the responsibility of the RAL HRMS -> Onyx sync. A document missing either
 field, carrying an unrecognized ``record_type``, or (when the caller passed
 a ``tenant_id``) tagged with a different tenant, is dropped rather than
 guessed at: see ``glue.domain`` on why there is no such thing as

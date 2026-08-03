@@ -1,6 +1,6 @@
 """Tenant role assignment synchronization into OpenFGA.
 
-RAL/Frappe tenant roles become enforceable AI retrieval permissions only after
+RAL/RAL HRMS tenant roles become enforceable AI retrieval permissions only after
 they are reflected in the OpenFGA tenant object. This module keeps that mapping
 deterministic and tenant-scoped.
 """

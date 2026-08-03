@@ -1,4 +1,4 @@
-"""SQLite-backed durable Frappe sync checkpoint store.
+"""SQLite-backed durable RAL HRMS sync checkpoint store.
 
 This is the local/single-node durable bridge for SyncEngine checkpoints. The
 production target remains PostgreSQL/RLS, but this store proves the checkpoint
@@ -12,11 +12,11 @@ import sqlite3
 import threading
 from pathlib import Path
 
-from .frappe_sync import SyncCheckpoint
+from .hr_source_sync import SyncCheckpoint
 
 
 class SqliteCheckpointStore:
-    """Durable implementation of the Frappe sync CheckpointStore protocol."""
+    """Durable implementation of the RAL HRMS sync CheckpointStore protocol."""
 
     def __init__(self, path: Path | str) -> None:
         self._path = Path(path)
