@@ -30,6 +30,8 @@ import logging
 import os
 import sys
 
+from dotenv import load_dotenv
+
 from glue.demo_seed import (
     DEMO_PERSONAS,
     DEMO_SAMPLE_QUESTIONS,
@@ -46,6 +48,7 @@ from glue.openfga_client import OpenFgaTupleWriter
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("seed_demo_org")
+load_dotenv()
 
 
 class SeedDemoOrgError(RuntimeError):

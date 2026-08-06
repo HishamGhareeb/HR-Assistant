@@ -30,13 +30,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
 import yaml
 from openfga_sdk import ClientConfiguration, OpenFgaClient
 from openfga_sdk.client.models import ClientTuple
+from openfga_sdk.exceptions import NotFoundException
 from openfga_sdk.models import CreateStoreRequest, WriteAuthorizationModelRequest
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("provision_openfga")
+load_dotenv()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OPENFGA_DIR = REPO_ROOT / "openfga"
@@ -109,7 +112,16 @@ def _model_content_matches(existing_model, new_model_json: dict) -> bool:
 
 
 async def ensure_model(client: OpenFgaClient, model_json: dict) -> str:
-    latest = await client.read_latest_authorization_model()
+    # read_latest_authorization_model returns a ReadAuthorizationModelResponse
+    # wrapper (the actual model is on .authorization_model), and raises
+    # NotFoundException -- rather than returning None -- when the store has
+    # no model yet.
+    try:
+        response = await client.read_latest_authorization_model()
+        latest = response.authorization_model if response is not None else None
+    except NotFoundException:
+        latest = None
+
     if latest is not None and _model_content_matches(latest, model_json):
         logger.info("authorization model unchanged, reusing %s", latest.id)
         return latest.id
