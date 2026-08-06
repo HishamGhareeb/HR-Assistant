@@ -4,7 +4,7 @@ Tenant role sync turns RAL-managed tenant user roles into OpenFGA tuples.
 
 This is the bridge between:
 
-- Frappe/RAL tenant role assignments;
+- RAL HRMS/RAL tenant role assignments;
 - durable admin/provisioning state;
 - OpenFGA tenant relations;
 - pre-retrieval AI authorization.
@@ -64,4 +64,4 @@ When no syncer is configured, the route preserves local/test behavior and only s
 
 ## Future work
 
-The next production step is to trigger this sync from durable tenant provisioning and Frappe role changes. The trigger must be idempotent, retryable, and audited, including a background reconciliation job for failed syncs.
+The next production step is to trigger this sync from durable tenant provisioning and RAL HRMS role changes. The trigger must be idempotent, retryable, and audited, including a background reconciliation job for failed syncs.

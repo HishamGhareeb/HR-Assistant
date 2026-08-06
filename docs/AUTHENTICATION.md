@@ -69,7 +69,7 @@ boundary that already requires it:
 - `glue.domain.require_same_tenant` — generic guard, raises `CrossTenantError`
 - `glue.onyx_client.OnyxClient.search(question, tenant_id=...)`
 - `glue.openfga_client.OpenFgaFilter.filter_authorized(user_id, documents, tenant_id=...)`
-- `glue.frappe_sync.SyncEngine.sync_all(tenant_id, records)`
+- `glue.hr_source_sync.SyncEngine.sync_all(tenant_id, records)`
 
 `tests/test_auth.py::test_verified_identity_feeds_require_same_tenant_and_rejects_foreign_data`
 exercises this chain end-to-end: a verified `Identity` for tenant `acme`

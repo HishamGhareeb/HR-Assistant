@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from openfga_sdk.client.models import ClientTuple
+from openfga_sdk.exceptions import NotFoundException
 
 from scripts.provision_openfga import (
     ProvisionError,
@@ -68,6 +69,17 @@ class FakeWrittenModel:
         self.authorization_model_id = model_id
 
 
+class FakeReadAuthorizationModelResponse:
+    """Mirrors the real SDK's ReadAuthorizationModelResponse -- the actual
+    model lives on .authorization_model, it isn't the response itself
+    (this file's ensure_model tests used to assume otherwise and passed
+    against a shape the real SDK never returns -- see provision_openfga.py's
+    ensure_model docstring)."""
+
+    def __init__(self, authorization_model) -> None:
+        self.authorization_model = authorization_model
+
+
 class FakeModelClient:
     def __init__(self, latest=None, on_write_id: str = "new-model-id") -> None:
         self._latest = latest
@@ -75,7 +87,11 @@ class FakeModelClient:
         self.write_calls = 0
 
     async def read_latest_authorization_model(self):
-        return self._latest
+        if self._latest is None:
+            # The real API 404s (raises NotFoundException) when the store
+            # has no model yet -- it never returns a bare None.
+            raise NotFoundException(status=404, reason="no authorization model")
+        return FakeReadAuthorizationModelResponse(self._latest)
 
     async def write_authorization_model(self, body):
         self.write_calls += 1

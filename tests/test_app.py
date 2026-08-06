@@ -21,7 +21,7 @@ from glue.admin_controls import InMemoryAdminControlStore, StaticHrAdminAuthoriz
 from glue.app import create_app
 from glue.auth import TokenVerifier, static_key_resolver
 from glue.domain import Identity, Suggestion, SuggestionStatus
-from glue.frappe_sync import SyncConfig, SyncEngine
+from glue.hr_source_sync import SyncConfig, SyncEngine
 from glue.observability import Metrics
 from glue.pipeline import PipelineResult
 from glue.suggestions import InMemorySuggestionStore, StaticHrReviewAuthorizer
@@ -184,6 +184,54 @@ def test_health_endpoint():
     assert response.json() == {"status": "ok"}
 
 
+# --- dev-only token minting (HIS-72) ---------------------------------------
+
+
+def test_dev_token_endpoint_is_absent_by_default(monkeypatch):
+    monkeypatch.delenv("DEV_AUTH_ENABLED", raising=False)
+    with build_client() as client:
+        response = client.post("/v1/dev/token", json={"tenant_id": "acme", "user_id": "priya"})
+    assert response.status_code == 404
+
+
+def test_dev_token_endpoint_503s_when_enabled_but_misconfigured(monkeypatch):
+    monkeypatch.setenv("DEV_AUTH_ENABLED", "true")
+    monkeypatch.delenv("DEV_AUTH_PRIVATE_KEY_PEM", raising=False)
+    with build_client() as client:
+        response = client.post("/v1/dev/token", json={"tenant_id": "acme", "user_id": "priya"})
+    assert response.status_code == 503
+
+
+def test_dev_token_endpoint_mints_a_token_that_authenticates_a_real_request(monkeypatch):
+    dev_private_key, dev_public_key = generate_keypair()
+    monkeypatch.setenv("DEV_AUTH_ENABLED", "true")
+    monkeypatch.setenv("DEV_AUTH_PRIVATE_KEY_PEM", dev_private_key)
+    monkeypatch.setenv("DEV_AUTH_KID", "dev-key-1")
+    monkeypatch.setenv("AUTH_ISSUER", ISSUER)
+    monkeypatch.setenv("AUTH_AUDIENCE", AUDIENCE)
+
+    pipeline = FakePipeline()
+    verifier = TokenVerifier(
+        key_resolver=static_key_resolver({"dev-key-1": dev_public_key}), issuer=ISSUER, audience=AUDIENCE
+    )
+
+    with build_client(pipeline=pipeline, verifier=verifier) as client:
+        minted = client.post("/v1/dev/token", json={"tenant_id": "acme", "user_id": "priya"})
+        assert minted.status_code == 200
+        body = minted.json()
+        assert body["token_type"] == "bearer"
+        assert body["expires_in"] > 0
+
+        response = client.post(
+            "/v1/questions",
+            headers={"Authorization": f"Bearer {body['access_token']}"},
+            json={"question": "leave balance?"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "acme/priya: leave balance?"
+
+
 def test_question_without_authorization_header_is_rejected():
     with build_client() as client:
         response = client.post("/v1/questions", json={"question": "My leave balance?"})
@@ -280,7 +328,7 @@ def test_review_inbox_lists_only_callers_tenant():
     assert [item["suggestion_id"] for item in response.json()] == ["acme-sug"]
 
 
-def test_review_decision_approves_without_mutating_pipeline_or_frappe():
+def test_review_decision_approves_without_mutating_pipeline_or_source_hrms():
     store = InMemorySuggestionStore()
     store.create(make_suggestion())
     pipeline = FakePipeline()
@@ -377,7 +425,7 @@ def test_admin_role_assignment_surfaces_retryable_sync_failure():
     assert response.json()["detail"] == "role assignment saved but authorization sync failed; retry required"
 
 
-def test_admin_synthetic_resync_records_status_and_index_metadata_without_frappe_mutation():
+def test_admin_synthetic_resync_records_status_and_index_metadata_without_source_hrms_mutation():
     client, store, index = build_admin_client()
     with client:
         response = client.post(
@@ -411,7 +459,7 @@ def test_admin_synthetic_resync_records_status_and_index_metadata_without_frappe
         "record_type": "policy_document",
         "classification": "public",
     }
-    assert store.frappe_mutation_attempts == 0
+    assert store.source_mutation_attempts == 0
 
 
 def test_admin_resync_failure_is_visible_and_retryable():
@@ -470,7 +518,7 @@ def test_admin_synthetic_revoke_removes_indexed_data_safely():
     assert response.status_code == 200
     assert response.json()["deleted"] == 1
     assert index.documents == {}
-    assert store.frappe_mutation_attempts == 0
+    assert store.source_mutation_attempts == 0
 
 
 # --- request ID propagation -------------------------------------------

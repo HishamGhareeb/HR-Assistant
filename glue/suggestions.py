@@ -1,7 +1,7 @@
 """Persistent suggestion review inbox and lifecycle decisions.
 
 Suggestions are review records only. A human approval/rejection/dismissal
-records an immutable decision in this store; it deliberately has no Frappe
+records an immutable decision in this store; it deliberately has no RAL HRMS
 client and no HR-system write path.
 """
 from __future__ import annotations

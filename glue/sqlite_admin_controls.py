@@ -24,7 +24,7 @@ from .admin_controls import (
     TenantRole,
 )
 from .domain import Identity
-from .frappe_sync import FrappeRecord, ReconciliationReport, SyncEngine
+from .hr_source_sync import HrSourceRecord, ReconciliationReport, SyncEngine
 
 
 class SqliteAdminControlStore:
@@ -34,9 +34,9 @@ class SqliteAdminControlStore:
         self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
-        # The store still has no Frappe write dependency. Existing tests and
+        # The store still has no RAL HRMS write dependency. Existing tests and
         # future audit checks can assert this remains zero.
-        self.frappe_mutation_attempts = 0
+        self.source_mutation_attempts = 0
         self._init_schema()
 
     def list_sources(self, tenant_id: str) -> list[SourceStatus]:
@@ -70,12 +70,12 @@ class SqliteAdminControlStore:
         *,
         identity: Identity,
         source_id: str,
-        records: list[FrappeRecord],
+        records: list[HrSourceRecord],
         sync_engine: SyncEngine,
     ) -> SyncRunSummary:
         safe_source_id = _clean(source_id)
         tenant_records = [
-            FrappeRecord(
+            HrSourceRecord(
                 doctype=record.doctype,
                 name=record.name,
                 tenant_id=identity.tenant_id,
@@ -97,7 +97,7 @@ class SqliteAdminControlStore:
         sync_engine: SyncEngine,
     ) -> SyncRunSummary:
         safe_source_id = _clean(source_id)
-        record = FrappeRecord(
+        record = HrSourceRecord(
             doctype=_clean(doctype),
             name=_clean(name),
             tenant_id=identity.tenant_id,

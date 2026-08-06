@@ -30,6 +30,8 @@ import logging
 import os
 import sys
 
+from dotenv import load_dotenv
+
 from glue.demo_seed import (
     DEMO_PERSONAS,
     DEMO_SAMPLE_QUESTIONS,
@@ -40,12 +42,13 @@ from glue.demo_seed import (
     demo_review_authorizer_map,
     seed_demo_organization,
 )
-from glue.frappe_sync import SyncConfig, SyncEngine
+from glue.hr_source_sync import SyncConfig, SyncEngine
 from glue.onyx_indexer import OnyxIndexer
 from glue.openfga_client import OpenFgaTupleWriter
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("seed_demo_org")
+load_dotenv()
 
 
 class SeedDemoOrgError(RuntimeError):

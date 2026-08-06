@@ -13,7 +13,7 @@ making autonomous changes.
 - Versioned HTTP API and health endpoint
 - Real Onyx adapter with a stable document metadata contract
 - OpenFGA model deployment and authorization integration tests
-- Frappe-to-Onyx/OpenFGA synthetic-data sync
+- RAL HRMS-to-Onyx/OpenFGA synthetic-data sync
 - Authentication and tenant context
 - Failure-safe behavior, audit events, and automated tests
 
@@ -46,7 +46,7 @@ making autonomous changes.
 1. Make the core service runnable and testable.
 2. Define the canonical retrieved-document and identity/tenant contracts.
 3. Complete the Onyx connector against a pinned Onyx version.
-4. Build synthetic Frappe ingestion and authorization tuple sync.
+4. Build synthetic RAL HRMS ingestion and authorization tuple sync.
 5. Add real authentication and strict tenant isolation.
 6. Build the smallest end-to-end employee chat and HR review workflow.
 

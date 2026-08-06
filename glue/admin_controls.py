@@ -2,9 +2,9 @@
 access mapping.
 
 These controls are intentionally synthetic/read-only: they can run the
-existing Frappe -> Onyx/OpenFGA sync engine against supplied records or a
-synthetic deletion record, but they do not contain a Frappe client and
-cannot mutate Frappe HR. They are operator controls around the ingestion
+existing RAL HRMS -> Onyx/OpenFGA sync engine against supplied records or a
+synthetic deletion record, but they do not contain a RAL HRMS client and
+cannot mutate RAL HRMS. They are operator controls around the ingestion
 pipeline, not a source-system write path.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from .domain import Identity
-from .frappe_sync import FrappeRecord, ReconciliationReport, SyncEngine
+from .hr_source_sync import HrSourceRecord, ReconciliationReport, SyncEngine
 
 
 class AdminAuthorizationError(PermissionError):
@@ -127,7 +127,7 @@ class AdminControlStore(Protocol):
         *,
         identity: Identity,
         source_id: str,
-        records: list[FrappeRecord],
+        records: list[HrSourceRecord],
         sync_engine: SyncEngine,
     ) -> SyncRunSummary: ...
     async def synthetic_revoke(
@@ -155,9 +155,9 @@ class InMemoryAdminControlStore:
         self._runs: list[SyncRunSummary] = []
         self._roles: dict[tuple[str, str], AccessRoleAssignment] = {}
         self._lock = threading.Lock()
-        # Tests can assert this remains zero; the store has no Frappe write
+        # Tests can assert this remains zero; the store has no RAL HRMS write
         # dependency and never increments it.
-        self.frappe_mutation_attempts = 0
+        self.source_mutation_attempts = 0
 
     def list_sources(self, tenant_id: str) -> list[SourceStatus]:
         with self._lock:
@@ -174,12 +174,12 @@ class InMemoryAdminControlStore:
         *,
         identity: Identity,
         source_id: str,
-        records: list[FrappeRecord],
+        records: list[HrSourceRecord],
         sync_engine: SyncEngine,
     ) -> SyncRunSummary:
         safe_source_id = _clean(source_id)
         tenant_records = [
-            FrappeRecord(
+            HrSourceRecord(
                 doctype=record.doctype,
                 name=record.name,
                 tenant_id=identity.tenant_id,
@@ -201,7 +201,7 @@ class InMemoryAdminControlStore:
         sync_engine: SyncEngine,
     ) -> SyncRunSummary:
         safe_source_id = _clean(source_id)
-        record = FrappeRecord(
+        record = HrSourceRecord(
             doctype=_clean(doctype),
             name=_clean(name),
             tenant_id=identity.tenant_id,

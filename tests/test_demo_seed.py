@@ -7,6 +7,7 @@ from __future__ import annotations
 import pytest
 
 from glue.demo_seed import (
+    DEMO_EMPLOYEES,
     DEMO_PERSONAS,
     DEMO_SAMPLE_QUESTIONS,
     DEMO_TENANT_ID,
@@ -18,7 +19,7 @@ from glue.demo_seed import (
     seed_demo_organization,
 )
 from glue.domain import DocumentClassification
-from glue.frappe_sync import FrappeMappingError, SyncConfig, SyncEngine, map_record
+from glue.hr_source_sync import HrSourceMappingError, SyncConfig, SyncEngine, map_record
 
 
 class FakeDocumentIndex:
@@ -55,12 +56,22 @@ def test_every_record_is_scoped_to_the_demo_tenant():
     assert all(record.tenant_id == DEMO_TENANT_ID for record in records)
 
 
+def test_demo_company_has_twenty_five_people_and_full_record_coverage():
+    records = build_demo_records()
+    assert len(DEMO_EMPLOYEES) == 25
+    assert sum(1 for record in records if record.doctype == "Employee") == 25
+    assert sum(1 for record in records if record.doctype == "Salary Slip") == 25
+    assert sum(1 for record in records if record.doctype == "Leave Application") >= 20
+    assert sum(1 for record in records if record.doctype == "Appraisal") >= 20
+    assert sum(1 for record in records if record.doctype == "HR Policy") >= 7
+
+
 def test_every_record_maps_without_error():
-    """Every seeded record must be mappable by the real frappe_sync rules
+    """Every seeded record must be mappable by the real hr_source_sync rules
     -- a demo dataset that fails to map is worse than no demo at all."""
     config = SyncConfig(hr_admin_user_ids=demo_hr_admin_user_ids())
     for record in build_demo_records():
-        map_record(record, config)  # raises FrappeMappingError on failure
+        map_record(record, config)  # raises HrSourceMappingError on failure
 
 
 def test_dataset_covers_every_classification_tier():
@@ -146,7 +157,7 @@ async def test_seeded_salary_slip_is_not_visible_via_manager_department_tuple():
 
     await seed_demo_organization(engine)
 
-    salary_tuples = [t for t in tuples.tuples if t[2].split("__", 1)[-1].startswith("SAL-")]
+    salary_tuples = [t for t in tuples.tuples if t[2].split("__", 1)[-1] == "SAL-priya-2026-07"]
     users_with_access = {t[0] for t in salary_tuples}
     assert users_with_access == {"user:priya", "user:hr-demo"}
     assert "user:farah" not in users_with_access

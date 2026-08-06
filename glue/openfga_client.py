@@ -12,7 +12,7 @@ namespacing is what actually prevents two tenants' record IDs from ever
 colliding -- ``leave_record:acme__sarah_leave`` and
 ``leave_record:globex__sarah_leave`` are unrelated objects to OpenFGA even
 if both tenants happen to name an employee "sarah". Every tuple written by
-the Frappe -> OpenFGA sync (department membership, ownership, hr_admin,
+the RAL HRMS -> OpenFGA sync (department membership, ownership, hr_admin,
 etc.) must use this same convention or a document silently becomes
 unreachable (fails closed, but for the wrong reason -- worth getting
 right). See `docs/OPENFGA_PROVISIONING.md`.
@@ -216,8 +216,8 @@ class OpenFgaFilter:
 
 
 class OpenFgaTupleWriter:
-    """Write-path counterpart to `OpenFgaFilter`, used by the Frappe sync
-    (`glue/frappe_sync.py`) to keep tuples in step with Frappe. Deletes
+    """Write-path counterpart to `OpenFgaFilter`, used by the RAL HRMS sync
+    (`glue/hr_source_sync.py`) to keep tuples in step with RAL HRMS. Deletes
     tolerate a tuple that's already gone -- OpenFGA's delete errors on a
     missing tuple, but a sync retry after a partial failure must be able
     to re-issue the same delete without that turning into a hard error."""

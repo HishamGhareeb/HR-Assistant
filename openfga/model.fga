@@ -5,7 +5,7 @@
 # store/model is used across tenants; the "<tenant_id>__<local_id>" object
 # ID convention (built by glue.openfga_client.scoped_object_id) is what
 # actually prevents cross-tenant collisions. Every tuple written by the
-# Frappe -> OpenFGA sync (department membership, ownership, hr_admin, ...)
+# RAL HRMS -> OpenFGA sync (department membership, ownership, hr_admin, ...)
 # MUST use the same convention for both the record and any department it
 # references, or a record silently becomes unreachable. See
 # docs/OPENFGA_PROVISIONING.md.

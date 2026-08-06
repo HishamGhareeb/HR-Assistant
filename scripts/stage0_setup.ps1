@@ -1,4 +1,4 @@
-# Stage 0: bring up Frappe HR, Onyx, and OpenFGA locally via Docker.
+# Stage 0: bring up RAL HRMS, Onyx, and OpenFGA locally via Docker.
 # Run this from the repo root once Docker Desktop is installed and running.
 # Each tool keeps its own docker-compose lifecycle; we clone them into
 # D:\hr-assistant-external (C: is nearly full) rather than vendoring them
@@ -15,9 +15,9 @@ $root = git rev-parse --show-toplevel
 $external = $ExternalDir
 New-Item -ItemType Directory -Force -Path $external | Out-Null
 
-Write-Host "== Frappe HR =="
+Write-Host "== RAL HRMS =="
 if (-not (Test-Path (Join-Path $external "hrms"))) {
-    git clone https://github.com/frappe/hrms (Join-Path $external "hrms")
+    git clone https://github.com/RAL HRMS/hrms (Join-Path $external "hrms")
 }
 Write-Host "Next: cd $(Join-Path $external 'hrms/docker'); docker compose up -d"
 Write-Host "Then check http://localhost:8000"

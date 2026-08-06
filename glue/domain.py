@@ -78,7 +78,7 @@ class Citation(BaseModel):
 
     model_config = {"frozen": True}
 
-    source: str = Field(min_length=1, description="Origin system, e.g. 'frappe_hr' or 'onyx'")
+    source: str = Field(min_length=1, description="Origin system, e.g. 'ral_hrms' or 'onyx'")
     object_type: DocumentType
     object_id: str = Field(min_length=1)
     tenant_id: str = Field(min_length=1)
@@ -136,7 +136,7 @@ _DECIDED_STATUSES = {SuggestionStatus.APPROVED, SuggestionStatus.REJECTED, Sugge
 
 class Suggestion(BaseModel):
     """A reviewable HR action raised by the assistant. It never mutates
-    Frappe directly; a status transition only happens through the human
+    RAL HRMS directly; a status transition only happens through the human
     review workflow, and that transition must record who decided and
     when."""
 

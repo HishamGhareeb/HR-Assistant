@@ -1,5 +1,5 @@
-"""Onyx ingestion adapter: push/retract documents so the Frappe -> Onyx
-sync (glue/frappe_sync.py) has somewhere to write. This is a separate
+"""Onyx ingestion adapter: push/retract documents so the RAL HRMS -> Onyx
+sync (glue/hr_source_sync.py) has somewhere to write. This is a separate
 client from glue/onyx_client.py (retrieval) because Onyx models "search
 for documents" and "push documents into the index" as two entirely
 different APIs, both pinned against the same Onyx **v4.4.7** tag used in
@@ -29,7 +29,7 @@ an Onyx-admin operational step out of scope here.
 `metadata` carries the same `tenant_id` / `record_type` keys that
 `glue/onyx_client.py` requires on the way back out, so a document indexed
 by this client is guaranteed retrievable and taggable by that one -- see
-`docs/FRAPPE_SYNC.md`.
+`docs/hr_source_sync.md`.
 
 ## Known gap
 

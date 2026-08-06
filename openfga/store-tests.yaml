@@ -184,7 +184,7 @@ tests:
       # tenant) -- included to document that this model itself does not
       # prevent a misconfigured tuple from crossing tenants. Enforcing
       # "an hr_admin tuple must only ever be written within its own
-      # tenant" is a sync-time invariant (Frappe -> OpenFGA), not something
+      # tenant" is a sync-time invariant (RAL HRMS -> OpenFGA), not something
       # this relation graph can see. See docs/OPENFGA_PROVISIONING.md.
       - user: user:hr_admin1
         object: leave_record:globex__sarah_leave

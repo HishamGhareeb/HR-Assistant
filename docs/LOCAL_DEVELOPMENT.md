@@ -1,12 +1,12 @@
 # Local development
 
-The default local stack starts only OpenFGA. It is intentionally isolated from Frappe HR, Onyx, and any production data. Use synthetic data until the adversarial-testing release gate is passed.
+The default local stack starts only OpenFGA. It is intentionally isolated from RAL HRMS, Onyx, and any production data. Use synthetic data until the adversarial-testing release gate is passed.
 
 ## Prerequisites
 
 - Docker Desktop with the WSL2 backend running.
 - Python 3.12 for the test suite.
-- An untracked `.env` file only when starting the API profile. Never put API keys, employee records, or Frappe credentials in Compose files, GitHub Actions, or committed fixtures.
+- An untracked `.env` file only when starting the API profile. Never put API keys, employee records, or RAL HRMS credentials in Compose files, GitHub Actions, or committed fixtures.
 
 ## Start authorization locally
 

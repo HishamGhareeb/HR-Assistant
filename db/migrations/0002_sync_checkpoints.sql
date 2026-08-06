@@ -1,4 +1,4 @@
--- HIS-52: production schema contract for Frappe sync checkpoints.
+-- HIS-52: production schema contract for RAL HRMS sync checkpoints.
 --
 -- This migration extends the PostgreSQL/RLS persistence contract after the
 -- SyncEngine checkpoint protocol gained a durable SQLite bridge. It is not

@@ -10,7 +10,7 @@ This document records the transition path so storage work does not leak into rou
 |---|---|---|
 | Suggestion review inbox | In-memory, JSONL, and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
 | Admin controls | In-memory and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
-| Frappe sync checkpoints | In-memory and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
+| RAL HRMS sync checkpoints | In-memory and SQLite protocol-compatible stores | SQLite is durable for local/single-node use; PostgreSQL/RLS remains the production target |
 | Audit events | Hash-chained JSONL | Tamper-evident local sink, not WORM |
 | Authorization tuples | OpenFGA | External authorization store |
 | Retrieval documents | Onyx | External retrieval system |
@@ -25,7 +25,7 @@ It preserves:
 - immutable terminal suggestion decisions;
 - idempotent repeated same decisions;
 - append-style decision history;
-- no Frappe write path;
+- no RAL HRMS write path;
 - no route-handler storage coupling.
 
 It is intentionally not the final production database layer. It is a low-risk bridge that proves the store contract can survive process restarts before the PostgreSQL/RLS implementation lands.
@@ -39,9 +39,9 @@ It preserves:
 - latest source status per tenant/source pair;
 - visible failed sync runs that remain retryable;
 - synthetic revoke/resync behavior through the existing `SyncEngine`;
-- no Frappe write path.
+- no RAL HRMS write path.
 
-`glue.sqlite_checkpoints.SqliteCheckpointStore` adds a durable bridge for Frappe sync checkpoints.
+`glue.sqlite_checkpoints.SqliteCheckpointStore` adds a durable bridge for RAL HRMS sync checkpoints.
 
 It preserves:
 
@@ -102,5 +102,5 @@ The `tenants` table is deliberately RLS-protected with no direct tenant-scoped a
 - Tenant ID must come from signed identity or trusted provisioning context.
 - Same-looking IDs in different tenants must remain separate records.
 - Decision history must not be mutated after commit.
-- Suggestion approval must not mutate Frappe HR or any source system.
+- Suggestion approval must not mutate RAL HRMS or any source system.
 - Audit/tracing remains metadata-only and separate from application state.

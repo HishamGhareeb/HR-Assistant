@@ -1,8 +1,8 @@
 # HR Assistant
 
-Flag-and-suggest HR assistant: Frappe HR (system of record) + Onyx (retrieval/chat) + OpenFGA (per-user authorization) + Claude (reasoning) + LLM Guard (output scanning) + Langfuse (tracing) + Promptfoo (adversarial regression) + WhatsApp delivery via `frappe/waba_integration`.
+Flag-and-suggest HR assistant: RAL HRMS (system of record) + Onyx (retrieval/chat) + OpenFGA (per-user authorization) + Claude (reasoning) + LLM Guard (output scanning) + Langfuse (tracing) + Promptfoo (adversarial regression) + WhatsApp delivery via `RAL HRMS/waba_integration`.
 
-No autonomous writes anywhere in scope. The assistant answers questions and raises suggestions for HR to review; only a human ever takes a real action in Frappe HR.
+No autonomous writes anywhere in scope. The assistant answers questions and raises suggestions for HR to review; only a human ever takes a real action in RAL HRMS.
 
 See `docs/` for the full build manifesto, adversarial test protocol, and DPA draft.
 
@@ -19,17 +19,17 @@ Requires Docker Desktop (WSL2 backend) running.
 
 **C: is nearly full, so everything heavy is routed to D::**
 - Right after installing Docker Desktop (before pulling any images), run `./scripts/move_docker_data_to_d.ps1` to relocate Docker's image/volume storage to `D:\docker-data`.
-- `./scripts/stage0_setup.ps1` clones `frappe/hrms` and the Onyx installer into `D:\hr-assistant-external` (override with `-ExternalDir`) and starts OpenFGA via the root `compose.yaml`. All published local ports are loopback-only.
+- `./scripts/stage0_setup.ps1` clones `RAL HRMS/hrms` and the Onyx installer into `D:\hr-assistant-external` (override with `-ExternalDir`) and starts OpenFGA via the root `compose.yaml`. All published local ports are loopback-only.
 - For Python dependencies, `pyproject.toml` and `uv.lock` are the single
   reproducible source of truth. If space is tight, set `UV_PROJECT_ENVIRONMENT`
   to a directory on D: before running `uv sync`.
 
-Frappe HR and Onyx each manage their own compose lifecycle in their own directories — follow the printed next steps to bring each one up.
+RAL HRMS and Onyx each manage their own compose lifecycle in their own directories — follow the printed next steps to bring each one up.
 
 ## Repo layout
 
 - `docker/` — compose files for services we own directly (OpenFGA now; Langfuse later)
-- `external/` — git-ignored clones of Frappe HR / Onyx, created by setup scripts
+- `external/` — git-ignored clones of RAL HRMS / Onyx, created by setup scripts
 - `glue/` — Python pipeline: Onyx retrieval -> OpenFGA filtering -> Claude -> LLM Guard -> Langfuse trace -> WhatsApp
 - `openfga/` — authorization model and test tuples (Stage 2)
 - `scripts/` — setup and data-seeding scripts

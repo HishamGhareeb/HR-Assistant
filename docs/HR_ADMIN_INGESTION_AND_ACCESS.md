@@ -2,9 +2,9 @@
 
 HIS-22 adds tenant-scoped HR admin controls around ingestion, sync
 visibility, and access mapping. These controls are still read-only with
-respect to Frappe HR: they can run the synthetic sync engine against
+respect to RAL HRMS: they can run the synthetic sync engine against
 operator-supplied records or a synthetic deletion marker, but they do not
-call any Frappe mutation API.
+call any RAL HRMS mutation API.
 
 ## Classification model
 
@@ -26,7 +26,7 @@ Supported classifications are:
   OpenFGA checks.
 - `system_confidential` — reserved for tenant system-admin workflows.
 
-The current synthetic Frappe mapping tags HR policies as `public`,
+The current synthetic RAL HRMS mapping tags HR policies as `public`,
 employee and leave records as `internal`, appraisals as `manager_only`, and
 salary slips as `hr_only`.
 
@@ -66,9 +66,9 @@ A user listed under one tenant has no access to another tenant.
 - `GET /v1/hr/admin/access/roles`
 - `PUT /v1/hr/admin/access/roles/{user_id}`
 
-`resync` accepts synthetic Frappe-shaped records. The server sets their
+`resync` accepts synthetic HR-source-shaped records. The server sets their
 tenant from the signed identity, ignoring any cross-tenant input. `revoke`
-creates a synthetic `FrappeRecord(deleted=True)` for the caller's tenant.
+creates a synthetic `HrSourceRecord(deleted=True)` for the caller's tenant.
 Both produce a sync run summary with created/updated/deleted/unchanged
 counts and per-record failures so operators can see retryable failures.
 
